@@ -28,7 +28,7 @@ int main() {
 
     printf(PRINTF_BINARY_PATTERN_INT16 "\n", PRINTF_BYTE_TO_BINARY_INT16(result));
     // msb      lsb 
-    u16 t1 = 0b000100001000000;
+    u16 t1 = 0b0000-1000-0100-0000;
     u8 tmsb = msb(t1);
     u8 tlsb = lsb(t1);
     printf("MSB: "PRINTF_BINARY_PATTERN_INT8"\n", PRINTF_BYTE_TO_BINARY_INT8(tmsb));
