@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
     u8* buffer_data;
-    u32 buffer_size;
+    long buffer_size;
 } data_file;
 
 typedef struct {

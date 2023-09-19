@@ -1,6 +1,8 @@
 #include "../include/cpu.h"
 #include "../include/instruction.h"
 
+cpu_context cpu;
+
 u16 reverse_value(u16 num) {
     return ((num & 0xFF00) >> 8) | ((num & 0x00FF) << 8);
 }
@@ -32,6 +34,8 @@ bool cpu_check_cond(condition_type cond) {
     }
     return true;
 }
+
+
 
 u16 cpu_read_reg(reg_set type) {
     switch(type) {
@@ -100,34 +104,41 @@ void cpu_write_reg(reg_set type, u16 value) {
 }
 
 void run_cpu() {
-    if(!cpu.paused) {
-        //instruction* inst = inst_by_opcode(cpu.reg.pc);
+    while(!cpu.control.shutdown) {
+        instruction inst = get_instruction(read_uint8_data(cpu.reg.pc));
         cpu.current_opcode = read_uint8_data(cpu.reg.pc);
-        //fetch_cpu(inst); 
-        //cycle_cpu(inst->cycles);
+        printf("[INST]: %s [OP01]: %s [OP01]: %s [ADDR]: %s [OPCODE]: 0x%2.2X [PC]: 0x%2.2X\n", get_mnemonic_string(inst.inst_mnemonic), get_op_string(inst.op01), get_op_string(inst.op02), get_addr_mode_string(inst.address_mode), cpu.current_opcode, cpu.reg.pc);
+        
+        fetch_cpu(inst); 
+        cycle_cpu(cpu.total_cycles);
         cpu.reg.pc++;
     }
 }
 
 void init_cpu() {
     cpu.reg.pc = 0x0100;
+    cpu.reg.sp = 0xFFFE;
     cpu_write_reg(reg_af, 0x01B0);
     cpu_write_reg(reg_bc, 0x0013);
     cpu_write_reg(reg_de, 0x00D8);
     cpu_write_reg(reg_hl, 0x014D);
+    cpu.control.ime = false;
+    cpu.control.ime_scheduled = false;
+    cpu.control.halted = false;
     cpu.paused = false;
+    cpu.control.shutdown = false;
 }
 
 void cycle_cpu(uint cycles) {
     // todo
 }
 
-void fetch_cpu(instruction* inst) {
-
+void fetch_cpu(instruction inst) {
     cpu.carry = 0;
     cpu.result = 0;
+    cpu.total_cycles = inst.cycles;
 
-    switch(inst->inst_mnemonic) {
+    switch(inst.inst_mnemonic) {
         case in_ld:
         case in_ldh:
             LD_proc(inst);
@@ -136,11 +147,15 @@ void fetch_cpu(instruction* inst) {
             break;
         case in_push:
             cpu.reg.sp--;
-            write_uint8_data(cpu.reg.sp--, msb(cpu_read_reg(inst->op01)));
-            write_uint8_data(cpu.reg.sp, lsb(cpu_read_reg(inst->op01)));
+            write_uint8_data(cpu.reg.sp--, msb(cpu_read_reg(inst.op01)));
+            write_uint8_data(cpu.reg.sp, lsb(cpu_read_reg(inst.op01)));
             break;
         case in_pop:
-            cpu_write_reg(inst->op01, u8_to_u16(read_uint8_data(cpu.reg.sp++), read_uint8_data(cpu.reg.sp++)));
+            {
+                u16 addr1 = cpu.reg.sp++;
+                u16 addr2 = cpu.reg.sp++;
+                cpu_write_reg(inst.op01, u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2)));
+            }
             break;
         case in_add:
             ADD_proc(inst);
@@ -169,6 +184,15 @@ void fetch_cpu(instruction* inst) {
         case in_jr:
             JR_proc(inst);
             break;
+        case in_dec:
+            DEC_proc(inst);
+            break;
+        case in_inc:
+            INC_proc(inst);
+            break;
+        case in_cp:
+            CP_proc(inst);
+            break;
         case in_ccf:
             {
                 SET_HALF_FLAG(0)
@@ -190,21 +214,55 @@ void fetch_cpu(instruction* inst) {
             SET_SUB_FLAG(1)
             SET_HALF_FLAG(1)
             break;
-        
+        case in_call:
+            CALL_proc(inst);
+            break;
+        case in_ret:
+            RET_proc(inst);
+            break;
+        case in_reti:
+            {
+                u16 addr1 = cpu.reg.sp++;
+                u16 addr2 = cpu.reg.sp++;
+                cpu.reg.pc = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+                cpu.control.ime = 1;
+            }
+            break;
+        case in_rst:
+            RST_proc(inst);
+            break;
+        case in_di:
+            cpu.control.ime = 0;
+            break;
+        case in_ei:
+            cpu.control.ime_scheduled = true;
+            break;
+        case in_stop:
+            // todo
+            break;
+        case in_halt:
+            // todo
+            cpu.control.halted = true;
+            break;
+        case in_cb:
+            cb_prefix_instruction(inst);
+            break;
         default:
-            _ERROR("fetch_cpu_error, cannot find mnemonic! PC: %u", cpu.reg.pc)
+            _ERROR("fetch_cpu_error, cannot find mnemonic! PC: " PRINTF_ERROR_PC_REG)
             _CRITICAL
     }
 }
 
-void LD_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void LD_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
+            cpu_write_reg(inst.op01, cpu_read_reg(inst.op02));
+            break;
         case am_r_d8:
-            cpu_write_reg(inst->op01, cpu_read_reg(inst->op02));
+            cpu_write_reg(inst.op01, read_uint8_data(cpu.reg.pc++));
             break;
         case am_hli_r: //0x22
-            write_uint8_data(cpu_read_reg(reg_hl), cpu_read_reg(inst->op02));
+            write_uint8_data(cpu_read_reg(reg_hl), cpu_read_reg(inst.op02));
             increment_reg(reg_hl, 1);
             break;
         case am_r_hld:
@@ -214,58 +272,70 @@ void LD_proc(instruction* inst) {
             break;
         case am_a16_r:
             {
-                u16 nn = u8_to_u16(read_uint8_data(cpu.reg.pc++), read_uint8_data(cpu.reg.pc++));
+                u16 addr1 = cpu.reg.pc++;
+                u16 addr2 = cpu.reg.pc++;
+                u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
                 if(cpu.current_opcode == 0x08) {
                     write_uint8_data(nn, lsb(cpu.reg.sp));
                     write_uint8_data(nn + 1, msb(cpu.reg.sp));
                 } else {
-                    write_uint8_data(nn, (u8) cpu_read_reg(inst->op02));
+                    write_uint8_data(nn, (u8) cpu_read_reg(inst.op02));
                 }
                 break;
             }
         case am_r_d16:
             {
-                u16 nn = u8_to_u16(read_uint8_data(cpu.reg.pc++), read_uint8_data(cpu.reg.pc++));
-                cpu_write_reg(inst->op01, nn);
+                u16 addr1 = cpu.reg.pc++;
+                u16 addr2 = cpu.reg.pc++;
+                u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+                cpu_write_reg(inst.op01, nn);
                 break;
             }
         case am_r_a16:
             {
-                u16 nn = u8_to_u16(read_uint8_data(cpu.reg.pc++), read_uint8_data(cpu.reg.pc++));
-                cpu_write_reg(inst->op01, read_uint8_data(nn));
+                u16 addr1 = cpu.reg.pc++;
+                u16 addr2 = cpu.reg.pc++;
+                u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+                cpu_write_reg(inst.op01, read_uint8_data(nn));
                 break;
             }
         case am_r_mr: 
             // LDH A, (C): Load accumulator (indirect 0xFF00+C)
-            cpu_write_reg(inst->op01, read_uint8_data(u8_to_u16(cpu_read_reg(inst->op02), 0xFF)));
+            cpu_write_reg(inst.op01, read_uint8_data(u8_to_u16(cpu_read_reg(inst.op02), 0xFF)));
             break;
         case am_mr_r: 
             // LDH (C), A: Load from accumulator (indirect 0xFF00+C)
-            write_uint8_data(u8_to_u16(cpu_read_reg(inst->op01), 0xFF), cpu_read_reg(inst->op02));
+            write_uint8_data(u8_to_u16(cpu_read_reg(inst.op01), 0xFF), cpu_read_reg(inst.op02));
             break;
         case am_r_a8:
             // LDH A, (n): Load accumulator (direct 0xFF00+n)
             {
                 u8 n = read_uint8_data(cpu.reg.pc++);
-                cpu_write_reg(inst->op01, u8_to_u16(n, 0xFF));
+                cpu_write_reg(inst.op01, u8_to_u16(n, 0xFF));
                 break;
             }
         case am_a8_r:
             // LDH (n), A: Load from accumulator (direct 0xFF00+n)
             {
                 u8 n = read_uint8_data(cpu.reg.pc++);
-                write_uint8_data(u8_to_u16(n, 0xFF), cpu_read_reg(inst->op02));
+                write_uint8_data(u8_to_u16(n, 0xFF), cpu_read_reg(inst.op02));
                 break;
             }
         case am_hld_r:
             // LD (HL-), A: Load from accumulator (indirect HL, decrement)
-            write_uint8_data(cpu_read_reg(reg_hl), cpu_read_reg(inst->op02));
+            write_uint8_data(cpu_read_reg(reg_hl), cpu_read_reg(inst.op02));
             decrement_reg(reg_hl, 1);
             break;
         case am_r_hli:
             // LD A, (HL+): Load accumulator (indirect HL, increment)
-            cpu_write_reg(inst->op01, read_uint8_data(cpu_read_reg(reg_hl)));
+            cpu_write_reg(inst.op01, read_uint8_data(cpu_read_reg(reg_hl)));
             increment_reg(reg_hl, 1);
+            break;
+        case am_mr_d8:
+            {
+                u8 nn = read_uint8_data(cpu.reg.pc++);
+                write_uint8_data(cpu_read_reg(reg_hl), nn);
+            }
             break;
         default:
             _ERROR("in_ld_proc_error_invalid_address_mode, cannot load instruction PC: " PRINTF_ERROR_PC_REG)
@@ -273,13 +343,13 @@ void LD_proc(instruction* inst) {
     }
 }
 
-void ADD_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void ADD_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             // ADD r: Add (register)
             {
-                u8 data = cpu_read_reg(inst->op01) + cpu_read_reg(inst->op02);
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) + cpu_read_reg(inst.op02);
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -287,9 +357,9 @@ void ADD_proc(instruction* inst) {
         case am_r_mr:
             //ADD (HL): Add (indirect HL)
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data += cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data += cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -297,8 +367,8 @@ void ADD_proc(instruction* inst) {
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data += cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                data += cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -309,21 +379,21 @@ void ADD_proc(instruction* inst) {
     }
 }
 
-void ADC_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void ADC_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) + cpu_read_reg(inst->op02) + GET_CARRY_FLAG();
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) + cpu_read_reg(inst.op02) + GET_CARRY_FLAG();
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data; 
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data += cpu_read_reg(inst->op01) + GET_CARRY_FLAG();
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data += cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -331,8 +401,8 @@ void ADC_proc(instruction* inst) {
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data += cpu_read_reg(inst->op01) + GET_CARRY_FLAG();
-                cpu_write_reg(inst->op01, data);
+                data += cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -342,21 +412,21 @@ void ADC_proc(instruction* inst) {
             _CRITICAL
     }
 }
-void SUB_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void SUB_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) - cpu_read_reg(inst->op02);
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02);
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data -= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data -= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -364,8 +434,8 @@ void SUB_proc(instruction* inst) {
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data -= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                data -= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -376,21 +446,21 @@ void SUB_proc(instruction* inst) {
     }
 }
 
-void SBC_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void SBC_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) - cpu_read_reg(inst->op02) - GET_CARRY_FLAG();
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02) - GET_CARRY_FLAG();
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data; 
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data -= cpu_read_reg(inst->op01) - GET_CARRY_FLAG();
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data -= cpu_read_reg(inst.op01) - GET_CARRY_FLAG();
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -398,8 +468,8 @@ void SBC_proc(instruction* inst) {
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data -= cpu_read_reg(inst->op01) - GET_CARRY_FLAG();
-                cpu_write_reg(inst->op01, data);
+                data -= cpu_read_reg(inst.op01) - GET_CARRY_FLAG();
+                cpu_write_reg(inst.op01, data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -410,19 +480,19 @@ void SBC_proc(instruction* inst) {
     }
 }
 
-void CP_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void CP_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) - cpu_read_reg(inst->op02);
+                u8 data = cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02);
                 cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data -= cpu_read_reg(inst->op01);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data -= cpu_read_reg(inst.op01);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -430,7 +500,7 @@ void CP_proc(instruction* inst) {
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data -= cpu_read_reg(inst->op01);
+                data -= cpu_read_reg(inst.op01);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -440,20 +510,20 @@ void CP_proc(instruction* inst) {
             _CRITICAL
     }
 }
-void INC_proc(instruction* inst){
-    switch(inst->address_mode) {
+void INC_proc(instruction inst){
+    switch(inst.address_mode) {
         case am_r:
             {
-                u8 data = cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data + 1);
+                u8 data = cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data + 1);
                 cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op01)) + 1;
-                write_uint8_data(cpu_read_reg(inst->op01), data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op01)) + 1;
+                write_uint8_data(cpu_read_reg(inst.op01), data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -464,20 +534,20 @@ void INC_proc(instruction* inst){
     }
 }
 
-void DEC_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void DEC_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r:
             {
-                u8 data = cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data - 1);
+                u8 data = cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data - 1);
                 cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op01)) - 1;
-                write_uint8_data(cpu_read_reg(inst->op01), data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op01)) - 1;
+                write_uint8_data(cpu_read_reg(inst.op01), data);
                 cpu.carry = data;
                 cpu.result = data;
             }
@@ -488,28 +558,28 @@ void DEC_proc(instruction* inst) {
     }
 }
  
-void AND_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void AND_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) & cpu_read_reg(inst->op02);
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) & cpu_read_reg(inst.op02);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data &= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data &= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data &= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                data &= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
@@ -519,28 +589,28 @@ void AND_proc(instruction* inst) {
     }
 }
 
-void OR_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void OR_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) | cpu_read_reg(inst->op02);
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) | cpu_read_reg(inst.op02);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data |= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data |= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data |= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                data |= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
@@ -550,28 +620,28 @@ void OR_proc(instruction* inst) {
     }
 }
 
-void XOR_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void XOR_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r_r:
             {
-                u8 data = cpu_read_reg(inst->op01) ^ cpu_read_reg(inst->op02);
-                cpu_write_reg(inst->op01, data);
+                u8 data = cpu_read_reg(inst.op01) ^ cpu_read_reg(inst.op02);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
-                u8 data = read_uint8_data(cpu_read_reg(inst->op02));
-                data ^= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                data ^= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
-                data ^= cpu_read_reg(inst->op01);
-                cpu_write_reg(inst->op01, data);
+                data ^= cpu_read_reg(inst.op01);
+                cpu_write_reg(inst.op01, data);
                 cpu.result = data;
             }
             break;
@@ -581,17 +651,19 @@ void XOR_proc(instruction* inst) {
     }
 }
 
-void JP_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void JP_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_r:
-            cpu.reg.pc = cpu_read_reg(inst->op01);
+            cpu.reg.pc = cpu_read_reg(inst.op01);
             break;
         case am_d16:
-            u8 nn = u8_to_u16(read_uint8_data(cpu.reg.pc++), read_uint8_data(cpu.reg.pc++));
+            u16 addr1 = cpu.reg.pc++;
+            u16 addr2 = cpu.reg.pc++;
+            u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
             if(cpu.current_opcode == 0xC3) {    
                 cpu.reg.pc = nn;
             } else {
-                if(cpu_check_cond(inst->cond_type)) {
+                if(cpu_check_cond(inst.cond_type)) {
                     cpu.reg.pc = nn;
                 }
             }
@@ -602,14 +674,14 @@ void JP_proc(instruction* inst) {
     }
 }
 
-void JR_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void JR_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_d8:
             int8_t nn = (int8_t) read_uint8_data(cpu.reg.pc++);
             if(cpu.current_opcode == 0x18) {
                 cpu.reg.pc += nn;
             } else {
-               if(cpu_check_cond(inst->cond_type)) {
+               if(cpu_check_cond(inst.cond_type)) {
                     cpu.reg.pc += nn;
                }
             }
@@ -620,17 +692,19 @@ void JR_proc(instruction* inst) {
     }
 }
 
-void CALL_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void CALL_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_d16:
-            u8 nn = u8_to_u16(read_uint8_data(cpu.reg.pc++), read_uint8_data(cpu.reg.pc++));
+            u16 addr1 = cpu.reg.pc++;
+            u16 addr2 = cpu.reg.pc++;
+            u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
             if(cpu.current_opcode == 0xCD) {
                 cpu.reg.sp--;
                 write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
                 write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
                 cpu.reg.pc = nn;
             } else {
-                if(cpu_check_cond(inst->cond_type)) {
+                if(cpu_check_cond(inst.cond_type)) {
                     cpu.reg.sp--;
                     write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
                     write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
@@ -644,15 +718,26 @@ void CALL_proc(instruction* inst) {
     }
 }
 
-void RET_proc(instruction* inst) {
-    switch(inst->address_mode) {
+void RET_proc(instruction inst) {
+    switch(inst.address_mode) {
         case am_imp:
-            if(cpu.current_opcode == 0xC9) {
-                cpu.reg.pc = u8_to_u16(read_uint8_data(cpu.reg.sp++), read_uint8_data(cpu.reg.sp++));
-            } else {
-                if(cpu_check_cond(inst->cond_type)) {
-                    cpu.reg.pc = u8_to_u16(read_uint8_data(cpu.reg.sp++), read_uint8_data(cpu.reg.sp++));
+            {
+                u16 addr1 = cpu.reg.sp++;
+                u16 addr2 = cpu.reg.sp++;
+                if(cpu.current_opcode == 0xC9) {
+                    cpu.reg.pc = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+                } else {
+                    if(cpu_check_cond(inst.cond_type)) {
+                        cpu.reg.pc = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+                    }
                 }
+            }
+            break;
+        case am_none:
+            {
+                u8 data1 = read_uint8_data(cpu.reg.sp++);
+                u8 data2 = read_uint8_data(cpu.reg.sp++);
+                cpu.reg.pc = u8_to_u16(data1, data2);
             }
             break;
         default:
@@ -660,4 +745,18 @@ void RET_proc(instruction* inst) {
             _CRITICAL
     }
 }
-void RETI_proc(instruction* inst);
+
+void RST_proc(instruction inst) {
+    switch(inst.address_mode) {
+        case am_imp:
+            // todo check func
+            cpu.reg.sp--;
+            write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
+            write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
+            cpu.reg.pc = u8_to_u16(inst.param, 0x00);
+            break;
+        default:
+            _ERROR("in_rst_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
+            _CRITICAL
+    }
+}

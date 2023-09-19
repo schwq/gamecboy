@@ -147,7 +147,7 @@ bool read_data_to_file(const char* file_path, cartridge_context* cart) {
     printf("\t RAM size     : %2.2X\n", cart->header->ram_size);
     printf("\t Lic Code     : %2.2X (%s)\n", cart->header->lic_code, cart_lic_name(cart));
     printf("\t ROM Version  : %2.2X\n", cart->header->version);
-    printf("\t Checksum     : %2.2X (%s)", cart->header->checksum, cart_header_checksum(cart) ? "PASSED" : "FAILED");
+    printf("\t Checksum     : %2.2X (%s)\n", cart->header->checksum, cart_header_checksum(cart) ? "PASSED" : "FAILED");
 
     return true;
 

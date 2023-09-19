@@ -4,10 +4,10 @@
 #include "cartridge.h"
 
 typedef struct {
-    cartridge_context data;
+    cartridge_context* data;
 } ram_context;
 
-static ram_context ram;
+extern ram_context ram;
 
 u8 read_uint8_data(u16 addr);
 void write_uint8_data(u16 addr, u8 value);

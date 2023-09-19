@@ -5,6 +5,7 @@
 #include "instruction.h"
 #include "cartridge.h"
 #include "ram.h"
+#include "cpu_cb_inst.h"
 
 enum flags {
     fZero = 7,
@@ -29,18 +30,28 @@ typedef struct {
 
 u16 reverse_value(u16 num);
 u16 cpu_read_reg(reg_set type);
+u16* cpu_read_pointer_u16(reg_set type);
 void cpu_write_reg(reg_set type, u16 value);
 
 typedef struct {
+    bool ime;
+    bool halted;
+    bool ime_scheduled;
+    bool shutdown;
+} control_state;
+
+typedef struct {
     cpu_registers reg;
-    instruction* current_inst;
+    control_state control;
+    instruction current_inst;
     u8 current_opcode;
     bool paused;
     u8 result;
     u8 carry;
+    uint total_cycles; // some instructions can change the number of cycles depending of condition
 } cpu_context;
 
-static cpu_context cpu;
+extern cpu_context cpu;
 
 #define SET_ZERO_FLAG(on) BIT_SET(cpu.reg.f, 7, on);
 #define SET_CARRY_FLAG(on) BIT_SET(cpu.reg.f, 4, on);
@@ -51,40 +62,39 @@ static cpu_context cpu;
 #define GET_SUB_FLAG() BIT(cpu.reg.f, 6);
 #define GET_HALF_FLAG() BIT(cpu.reg.f, 5);
 
-#define PRINTF_ERROR_PC_REG PRINTF_BINARY_PATTERN_INT8 "\n", PRINTF_BYTE_TO_BINARY_INT8(cpu.reg.pc)
+#define PRINTF_ERROR_PC_REG "[%2.2X]\n", cpu.reg.pc
 
 extern u16 u8_to_u16(u8 lsb, u8 msb);
 extern u8 lsb(u16 number);
 extern u8 msb(u16 number);
 
-static void run_cpu();
-static void init_cpu();
-static void cycle_cpu(uint cycles);
-static void terminate_cpu();
-static void fetch_cpu(instruction* inst);
-static void delay_cpu(u32 ms);
-static void affected_flags(const char flags[4]);
-static void increment_reg(reg_set reg, uint increment);
-static void decrement_reg(reg_set reg, uint decrement);
-static bool cpu_check_cond(condition_type cond);
+void run_cpu();
+void init_cpu();
+void cycle_cpu(uint cycles);
+void terminate_cpu();
+void fetch_cpu(instruction inst);
+void delay_cpu(u32 ms);
+void affected_flags(const char flags[4]);
+void increment_reg(reg_set reg, uint increment);
+void decrement_reg(reg_set reg, uint decrement);
+bool cpu_check_cond(condition_type cond);
 
 // instruction functions proc
-static void LD_proc(instruction* inst);
-static void ADD_proc(instruction* inst);
-static void ADC_proc(instruction* inst);
-static void SUB_proc(instruction* inst);
-static void SBC_proc(instruction* inst);
-static void CP_proc(instruction* inst);
-static void INC_proc(instruction* inst);
-static void DEC_proc(instruction* inst);
-static void AND_proc(instruction* inst);
-static void OR_proc(instruction* inst);
-static void XOR_proc(instruction* inst);
-static void JP_proc(instruction* inst);
-static void JR_proc(instruction* inst);
-static void CALL_proc(instruction* inst);
-static void RET_proc(instruction* inst);
-static void RETI_proc(instruction* inst);
-
+void LD_proc(instruction inst);
+void ADD_proc(instruction inst);
+void ADC_proc(instruction inst);
+void SUB_proc(instruction inst);
+void SBC_proc(instruction inst);
+void CP_proc(instruction inst);
+void INC_proc(instruction inst);
+void DEC_proc(instruction inst);
+void AND_proc(instruction inst);
+void OR_proc(instruction inst);
+void XOR_proc(instruction inst);
+void JP_proc(instruction inst);
+void JR_proc(instruction inst);
+void CALL_proc(instruction inst);
+void RET_proc(instruction inst);
+void RST_proc(instruction inst);
 
 #endif
