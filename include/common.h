@@ -16,6 +16,9 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef unsigned int uint;
 
+// Debugging defines 
+#define DG_STOP_AT_RST_IN true
+
 #define GAME_BUFFER_SIZE 1000
 
 #define BIT(a, n) ((a & (1 << n)) ? 1 : 0)

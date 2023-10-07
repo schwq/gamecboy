@@ -3,8 +3,120 @@
 
 cpu_context cpu;
 
+u8 rotate_left(u8 reg, uint shift) {
+    u8 s = shift >= 0 ? shift % 8 : -((shift)%8);
+    return (reg << s) | ( reg >> (8 - s));
+}
+
+u8 rotate_right(u8 reg, uint shift) {
+    u8 s = shift >= 0 ? shift % 8 : -((shift)%8);
+    return (reg >> s) | ( reg << (8 - s));
+}
+
 u16 reverse_value(u16 num) {
     return ((num & 0xFF00) >> 8) | ((num & 0x00FF) << 8);
+}
+
+short get_flag(cpu_flags flag) {
+    switch(flag) {
+        case fZero:
+            return GET_ZERO_FLAG()
+        case fHalf:
+            return GET_HALF_FLAG()
+        case fCarry:
+            return GET_CARRY_FLAG()
+        case fSubtraction:
+            return GET_SUB_FLAG()
+        default:
+            _ERROR("cpu_get_flag_invalid_flag_requested! returning 0!")
+            return 0;
+    }
+}
+
+void set_flag(cpu_flags flag, int value) {
+    switch(flag) {
+        case fZero:
+            SET_ZERO_FLAG(value);
+            break;
+        case fHalf:
+            SET_HALF_FLAG(value);
+            break;
+        case fCarry:
+            SET_CARRY_FLAG(value);
+            break;
+        case fSubtraction:
+            SET_SUB_FLAG(value);
+            break;
+        default:
+            _ERROR("cpu_set_flag_invalid_flag_enum!");
+    }
+}
+
+void affected_flags(const char flags[4]) {
+    if(flags == NO_FLAGS) return;
+    switch(flags[0]) {
+        case 'z':
+            cpu.result == 0 ? set_flag(fZero, 1) : set_flag(fZero, 0);
+            break;
+        case '0':
+            set_flag(fZero, 0);
+            break;
+        case '1':
+            set_flag(fZero, 1);
+            break;
+        case '-':
+            break;
+        default:
+            _ERROR("cpu_affected_flags_zero_flag_char_invalid!");
+    }
+
+    switch(flags[1]) {
+        case '0':
+            set_flag(fSubtraction, 0);
+            break;
+        case '1':
+            set_flag(fSubtraction, 1);
+            break;
+        case '-':
+            break;
+        default:
+            _ERROR("cpu_affected_flags_sub_flag_char_invalid!");
+    }
+
+    switch(flags[2]) {
+        case 'h':
+            // carry bit in the 3 4 bit 
+            (((cpu.c_op01 & 0xf) + (cpu.c_op02 & 0xf)) & 0x10) == 0x10 ? set_flag(fHalf, 1) : set_flag(fHalf, 0);
+            break;
+        case '0':
+            set_flag(fHalf, 0);
+            break;
+        case '1':
+            set_flag(fHalf, 1);
+            break;
+        case '-':
+            break;
+        default:
+            _ERROR("cpu_affected_flags_half_flag_char_invalid!");
+    }
+
+    switch(flags[3]) {
+        case 'c':
+            // carry bit in the 7 bit 
+            ((cpu.c_op01 + cpu.c_op02) > 0xff) ? set_flag(fCarry, 1) : set_flag(fCarry, 0);
+            break;
+        case '0':
+            set_flag(fCarry, 0);
+            break;
+        case '1':
+            set_flag(fCarry, 1);
+            break;
+        case '-':
+            break;
+        default:
+            _ERROR("cpu_affected_flags_carry_flag_char_invalid!");
+    }
+
 }
 
 void increment_reg(reg_set reg, uint increment) {
@@ -34,8 +146,6 @@ bool cpu_check_cond(condition_type cond) {
     }
     return true;
 }
-
-
 
 u16 cpu_read_reg(reg_set type) {
     switch(type) {
@@ -104,15 +214,19 @@ void cpu_write_reg(reg_set type, u16 value) {
 }
 
 void run_cpu() {
-    while(!cpu.control.shutdown) {
         instruction inst = get_instruction(read_uint8_data(cpu.reg.pc));
         cpu.current_opcode = read_uint8_data(cpu.reg.pc);
         printf("[INST]: %s [OP01]: %s [OP01]: %s [ADDR]: %s [OPCODE]: 0x%2.2X [PC]: 0x%2.2X\n", get_mnemonic_string(inst.inst_mnemonic), get_op_string(inst.op01), get_op_string(inst.op02), get_addr_mode_string(inst.address_mode), cpu.current_opcode, cpu.reg.pc);
         
+        if(DG_STOP_AT_RST_IN) {
+            if(inst.inst_mnemonic == in_rst) {
+                cpu.control.shutdown = true;
+            }
+        }
         fetch_cpu(inst); 
+        affected_flags(inst.flags);
         cycle_cpu(cpu.total_cycles);
         cpu.reg.pc++;
-    }
 }
 
 void init_cpu() {
@@ -134,7 +248,8 @@ void cycle_cpu(uint cycles) {
 }
 
 void fetch_cpu(instruction inst) {
-    cpu.carry = 0;
+    cpu.c_op01 = 0;
+    cpu.c_op02 = 0;
     cpu.result = 0;
     cpu.total_cycles = inst.cycles;
 
@@ -247,6 +362,24 @@ void fetch_cpu(instruction inst) {
         case in_cb:
             cb_prefix_instruction(inst);
             break;
+        case in_rlca:
+            cpu.reg.a = rotate_left(cpu.reg.a, 1);
+            break;
+        case in_rla:
+            {
+                short carry = GET_CARRY_FLAG()
+                cpu.reg.a = rotate_left(cpu.reg.a, carry);
+            }
+            break;
+        case in_rrca:
+            cpu.reg.a = rotate_right(cpu.reg.a, 1);
+            break;
+        case in_rra:
+            {
+                short carry = GET_CARRY_FLAG()
+                cpu.reg.a = rotate_right(cpu.reg.a,carry);
+            }
+            break;
         default:
             _ERROR("fetch_cpu_error, cannot find mnemonic! PC: " PRINTF_ERROR_PC_REG)
             _CRITICAL
@@ -349,8 +482,9 @@ void ADD_proc(instruction inst) {
             // ADD r: Add (register)
             {
                 u8 data = cpu_read_reg(inst.op01) + cpu_read_reg(inst.op02);
+                cpu.c_op01 = cpu_read_reg(inst.op01);
+                cpu.c_op02 = cpu_read_reg(inst.op02);
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -358,18 +492,20 @@ void ADD_proc(instruction inst) {
             //ADD (HL): Add (indirect HL)
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                cpu.c_op01 = data;
+                cpu.c_op02 = cpu_read_reg(inst.op01);
                 data += cpu_read_reg(inst.op01);
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
+                cpu.c_op01 = data;
+                cpu.c_op02 = cpu_read_reg(inst.op01);
                 data += cpu_read_reg(inst.op01);
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -384,26 +520,29 @@ void ADC_proc(instruction inst) {
         case am_r_r:
             {
                 u8 data = cpu_read_reg(inst.op01) + cpu_read_reg(inst.op02) + GET_CARRY_FLAG();
+                cpu.c_op01 = cpu_read_reg(inst.op01);
+                cpu.c_op02 = cpu_read_reg(inst.op02) + GET_CARRY_FLAG()
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data; 
             }
             break;
         case am_r_mr:
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                cpu.c_op01 = data;
+                cpu.c_op02 = cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
                 data += cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
+                cpu.c_op01 = data;
+                cpu.c_op02 = cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
                 data += cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -417,26 +556,29 @@ void SUB_proc(instruction inst) {
         case am_r_r:
             {
                 u8 data = cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02);
+                cpu.c_op01 = cpu_read_reg(inst.op01);
+                cpu.c_op02 = -(cpu_read_reg(inst.op02)); // TODO check if inverting the value changes the need to implement carry for subtraction
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                cpu.c_op01 = data;
+                cpu.c_op02 = -(cpu_read_reg(inst.op01));
                 data -= cpu_read_reg(inst.op01);
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
                 u8 data = read_uint8_data(cpu.reg.pc++);
+                cpu.c_op01 = data;
+                cpu.c_op02 = -(cpu_read_reg(inst.op01));
                 data -= cpu_read_reg(inst.op01);
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -451,26 +593,29 @@ void SBC_proc(instruction inst) {
         case am_r_r:
             {
                 u8 data = cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02) - GET_CARRY_FLAG();
+                cpu.c_op01 =  cpu_read_reg(inst.op01);
+                cpu.c_op02 = -(cpu_read_reg(inst.op02) - get_flag(fCarry));
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data; 
             }
             break;
         case am_r_mr:
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                cpu.c_op01 = read_uint8_data(cpu_read_reg(inst.op02));
+                cpu.c_op02 = -(cpu_read_reg(inst.op01) - get_flag(fCarry));
                 data -= cpu_read_reg(inst.op01) - GET_CARRY_FLAG();
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
-                u8 data = read_uint8_data(cpu.reg.pc++);
+                u8 data = read_uint8_data(cpu.reg.pc++); 
+                cpu.c_op01 = read_uint8_data(cpu.reg.pc++);
+                cpu.c_op02 = -(cpu_read_reg(inst.op01) - get_flag(fCarry));
                 data -= cpu_read_reg(inst.op01) - GET_CARRY_FLAG();
                 cpu_write_reg(inst.op01, data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -485,23 +630,26 @@ void CP_proc(instruction inst) {
         case am_r_r:
             {
                 u8 data = cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02);
-                cpu.carry = data;
+                cpu.c_op01 = cpu_read_reg(inst.op01);
+                cpu.c_op02 = -(cpu_read_reg(inst.op02));
                 cpu.result = data;
             }
             break;
         case am_r_mr:
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+                cpu.c_op01 = data;
+                cpu.c_op02 = -(cpu_read_reg(inst.op01));
                 data -= cpu_read_reg(inst.op01);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_r_d8:
             {
-                u8 data = read_uint8_data(cpu.reg.pc++);
+                u8 data = read_uint8_data(cpu.reg.pc++); 
+                cpu.c_op01 = data;
+                cpu.c_op02 = -(cpu_read_reg(cpu.reg.pc++));
                 data -= cpu_read_reg(inst.op01);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -510,21 +658,24 @@ void CP_proc(instruction inst) {
             _CRITICAL
     }
 }
+
 void INC_proc(instruction inst){
     switch(inst.address_mode) {
         case am_r:
             {
                 u8 data = cpu_read_reg(inst.op01);
+                cpu.c_op01 = data;
+                cpu.c_op02 = 1;
                 cpu_write_reg(inst.op01, data + 1);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_mr:
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op01)) + 1;
+                cpu.c_op01 = read_uint8_data(cpu_read_reg(inst.op01));
+                cpu.c_op02 = 1;
                 write_uint8_data(cpu_read_reg(inst.op01), data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -539,16 +690,18 @@ void DEC_proc(instruction inst) {
         case am_r:
             {
                 u8 data = cpu_read_reg(inst.op01);
+                cpu.c_op01 = data;
+                cpu.c_op02 = -1;
                 cpu_write_reg(inst.op01, data - 1);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
         case am_mr:
             {
                 u8 data = read_uint8_data(cpu_read_reg(inst.op01)) - 1;
+                cpu.c_op01 = read_uint8_data(cpu_read_reg(inst.op01));
+                cpu.c_op02 = -1;
                 write_uint8_data(cpu_read_reg(inst.op01), data);
-                cpu.carry = data;
                 cpu.result = data;
             }
             break;
@@ -657,6 +810,7 @@ void JP_proc(instruction inst) {
             cpu.reg.pc = cpu_read_reg(inst.op01);
             break;
         case am_d16:
+        {
             u16 addr1 = cpu.reg.pc++;
             u16 addr2 = cpu.reg.pc++;
             u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
@@ -667,6 +821,7 @@ void JP_proc(instruction inst) {
                     cpu.reg.pc = nn;
                 }
             }
+        }
             break;
         default:
             _ERROR("in_jp_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
@@ -677,6 +832,7 @@ void JP_proc(instruction inst) {
 void JR_proc(instruction inst) {
     switch(inst.address_mode) {
         case am_d8:
+        {
             int8_t nn = (int8_t) read_uint8_data(cpu.reg.pc++);
             if(cpu.current_opcode == 0x18) {
                 cpu.reg.pc += nn;
@@ -685,6 +841,7 @@ void JR_proc(instruction inst) {
                     cpu.reg.pc += nn;
                }
             }
+        }
             break;
         default:
             _ERROR("in_jr_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
@@ -695,20 +852,22 @@ void JR_proc(instruction inst) {
 void CALL_proc(instruction inst) {
     switch(inst.address_mode) {
         case am_d16:
-            u16 addr1 = cpu.reg.pc++;
-            u16 addr2 = cpu.reg.pc++;
-            u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
-            if(cpu.current_opcode == 0xCD) {
-                cpu.reg.sp--;
-                write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
-                write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
-                cpu.reg.pc = nn;
-            } else {
-                if(cpu_check_cond(inst.cond_type)) {
+            {
+                u16 addr1 = cpu.reg.pc++;
+                u16 addr2 = cpu.reg.pc++;
+                u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+                if(cpu.current_opcode == 0xCD) {
                     cpu.reg.sp--;
                     write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
                     write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
                     cpu.reg.pc = nn;
+                } else {
+                    if(cpu_check_cond(inst.cond_type)) {
+                        cpu.reg.sp--;
+                        write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
+                        write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
+                        cpu.reg.pc = nn;
+                    }
                 }
             }
             break;

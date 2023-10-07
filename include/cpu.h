@@ -7,12 +7,12 @@
 #include "ram.h"
 #include "cpu_cb_inst.h"
 
-enum flags {
+typedef enum {
     fZero = 7,
     fSubtraction = 6,
     fHalf = 5, 
     fCarry = 4
-};
+} cpu_flags;
 
 typedef struct {
     u8 a;
@@ -47,7 +47,8 @@ typedef struct {
     u8 current_opcode;
     bool paused;
     u8 result;
-    u8 carry;
+    u8 c_op01;
+    u8 c_op02;
     uint total_cycles; // some instructions can change the number of cycles depending of condition
 } cpu_context;
 
@@ -67,6 +68,8 @@ extern cpu_context cpu;
 extern u16 u8_to_u16(u8 lsb, u8 msb);
 extern u8 lsb(u16 number);
 extern u8 msb(u16 number);
+extern u8 rotate_left(u8 reg, uint shift);
+extern u8 rotate_right(u8 reg, uint shift);
 
 void run_cpu();
 void init_cpu();
@@ -77,6 +80,10 @@ void delay_cpu(u32 ms);
 void affected_flags(const char flags[4]);
 void increment_reg(reg_set reg, uint increment);
 void decrement_reg(reg_set reg, uint decrement);
+
+// special use
+void set_flag(cpu_flags flag, int value);
+short get_flag(cpu_flags flag);
 bool cpu_check_cond(condition_type cond);
 
 // instruction functions proc

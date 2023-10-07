@@ -1,0 +1,100 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/main.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/main.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/cartridge.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/cartridge.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/window.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/window.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/ram.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/ram.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/cpu.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/cpu.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/cpu_cb_inst.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/cpu_cb_inst.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "source/instruction.c"
+    ],
+    "directory": "/home/schwq/projects/gamecboy",
+    "file": "/home/schwq/projects/gamecboy/source/instruction.c",
+    "output": "/home/schwq/projects/gamecboy/main"
+  }
+]

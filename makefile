@@ -1,2 +1,5 @@
+CC := gcc 
+FLAGS := -Wall -g
+LINK := -lSDL2main -lSDL2  
 all:
-	gcc -Wall -g source/main.c source/cartridge.c source/ram.c source/cpu.c source/cpu_cb_inst.c source/instruction.c -o main && .\main.exe -I/include -L/libs/SDL2 -lSDL2 -lSDL2main
+	$(CC) $(FLAGS)  source/main.c source/cartridge.c source/window.c source/ram.c source/cpu.c source/cpu_cb_inst.c source/instruction.c -o main $(LINK) && ./main
