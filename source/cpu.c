@@ -28,7 +28,7 @@ short get_flag(cpu_flags flag) {
         case fSubtraction:
             return GET_SUB_FLAG()
         default:
-            _ERROR("cpu_get_flag_invalid_flag_requested! returning 0!")
+            _ERROR("cpu_get_flag_invalid_flag_requested! returning 0!");
             return 0;
     }
 }
@@ -53,6 +53,7 @@ void set_flag(cpu_flags flag, int value) {
 }
 
 void affected_flags(const char flags[4]) {
+    // TODO check if this flag is doing the right job at reading 
     if(flags == NO_FLAGS) return;
     switch(flags[0]) {
         case 'z':
@@ -209,24 +210,32 @@ void cpu_write_reg(reg_set type, u16 value) {
         case reg_pc: cpu.reg.pc = value; break;
         case reg_none:
         default:
-            _ERROR("cpu_write_register_unknown_register_error!")
+            _ERROR("cpu_write_register_unknown_register_error!");
     }
 }
 
 void run_cpu() {
-        instruction inst = get_instruction(read_uint8_data(cpu.reg.pc));
+        
+    instruction inst = get_instruction(read_uint8_data(cpu.reg.pc));
+        
         cpu.current_opcode = read_uint8_data(cpu.reg.pc);
-        printf("[INST]: %s [OP01]: %s [OP01]: %s [ADDR]: %s [OPCODE]: 0x%2.2X [PC]: 0x%2.2X\n", get_mnemonic_string(inst.inst_mnemonic), get_op_string(inst.op01), get_op_string(inst.op02), get_addr_mode_string(inst.address_mode), cpu.current_opcode, cpu.reg.pc);
+
+        printf("[INST]: %s [OP01]: %s [OP01]: %s [ADDR]: %s [OPCODE]: 0x%2.2X [PC]: 0x%2.2X\n", get_mnemonic_string(inst.inst_mnemonic),\ 
+            get_op_string(inst.op01), get_op_string(inst.op02), get_addr_mode_string(inst.address_mode), cpu.current_opcode, cpu.reg.pc);
         
         if(DG_STOP_AT_RST_IN) {
             if(inst.inst_mnemonic == in_rst) {
                 cpu.control.shutdown = true;
             }
         }
+        
         fetch_cpu(inst); 
-        affected_flags(inst.flags);
-        cycle_cpu(cpu.total_cycles);
-        cpu.reg.pc++;
+        
+        if(!cpu.control.shutdown) {
+            affected_flags(inst.flags);
+            cycle_cpu(cpu.total_cycles);
+            cpu.reg.pc++;
+        }
 }
 
 void init_cpu() {
@@ -244,7 +253,7 @@ void init_cpu() {
 }
 
 void cycle_cpu(uint cycles) {
-    // todo
+    // TODO 
 }
 
 void fetch_cpu(instruction inst) {
@@ -322,7 +331,7 @@ void fetch_cpu(instruction inst) {
             SET_SUB_FLAG(0)
             break;
         case in_daa:
-            // todo: https://ehaskins.com/2018-01-30 Z80 DAA/
+            // TODO: https://ehaskins.com/2018-01-30 Z80 DAA/
             break;
         case in_cpl:
             cpu.reg.a = ~cpu.reg.a;
@@ -353,10 +362,10 @@ void fetch_cpu(instruction inst) {
             cpu.control.ime_scheduled = true;
             break;
         case in_stop:
-            // todo
+            // TODO
             break;
         case in_halt:
-            // todo
+            // TODO
             cpu.control.halted = true;
             break;
         case in_cb:
@@ -381,8 +390,9 @@ void fetch_cpu(instruction inst) {
             }
             break;
         default:
-            _ERROR("fetch_cpu_error, cannot find mnemonic! PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("fetch_cpu_error, cannot find mnemonic! PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -471,8 +481,9 @@ void LD_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_ld_proc_error_invalid_address_mode, cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_ld_proc_error_invalid_address_mode, cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -510,8 +521,9 @@ void ADD_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_add_proc_error_invalid_address_mode,  cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_add_proc_error_invalid_address_mode,  cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -547,8 +559,9 @@ void ADC_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_adc_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_adc_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 void SUB_proc(instruction inst) {
@@ -583,8 +596,9 @@ void SUB_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_sub_proc_error_invalid_address_mode,  cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_sub_proc_error_invalid_address_mode,  cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -620,8 +634,9 @@ void SBC_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_sbc_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_sbc_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -654,8 +669,9 @@ void CP_proc(instruction inst) {
             }
             break;
         default:
-             _ERROR("in_cp_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+             _ERROR("in_cp_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+             SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -680,8 +696,9 @@ void INC_proc(instruction inst){
             }
             break;
         default:
-            _ERROR("in_inc_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_inc_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -706,8 +723,9 @@ void DEC_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_dec_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_dec_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
  
@@ -737,8 +755,9 @@ void AND_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_and_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_and_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -768,8 +787,9 @@ void OR_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_or_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_or_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -799,8 +819,9 @@ void XOR_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_xor_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_xor_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -824,8 +845,9 @@ void JP_proc(instruction inst) {
         }
             break;
         default:
-            _ERROR("in_jp_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_jp_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -844,8 +866,9 @@ void JR_proc(instruction inst) {
         }
             break;
         default:
-            _ERROR("in_jr_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_jr_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -872,8 +895,9 @@ void CALL_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_call_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_call_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -900,8 +924,9 @@ void RET_proc(instruction inst) {
             }
             break;
         default:
-            _ERROR("in_ret_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_ret_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }
 
@@ -915,7 +940,8 @@ void RST_proc(instruction inst) {
             cpu.reg.pc = u8_to_u16(inst.param, 0x00);
             break;
         default:
-            _ERROR("in_rst_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG)
-            _CRITICAL
+            _ERROR("in_rst_proc_error_invalid_address_mode cannot load instruction PC: " PRINTF_ERROR_PC_REG);
+            SHUTDOWN_CPU();
+            _CRITICAL;
     }
 }

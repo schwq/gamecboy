@@ -63,6 +63,7 @@ extern cpu_context cpu;
 #define GET_SUB_FLAG() BIT(cpu.reg.f, 6);
 #define GET_HALF_FLAG() BIT(cpu.reg.f, 5);
 
+#define SHUTDOWN_CPU() cpu.control.shutdown = true;
 #define PRINTF_ERROR_PC_REG "[%2.2X]\n", cpu.reg.pc
 
 extern u16 u8_to_u16(u8 lsb, u8 msb);

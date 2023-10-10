@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdarg.h>
 #include <math.h>
 #include <errno.h>
 
@@ -18,6 +19,7 @@ typedef unsigned int uint;
 
 // Debugging defines 
 #define DG_STOP_AT_RST_IN true
+#define DG_CPU_NO_CRITICAL_EXIT 0
 
 #define GAME_BUFFER_SIZE 1000
 
@@ -27,7 +29,13 @@ typedef unsigned int uint;
 
 #define BETWEEN(a, b, c) ((a >= b) && (a <= c))
 
+#ifndef DG_CPU_NO_CRITICAL_EXIT 
 #define _CRITICAL { fprintf(stderr, "Critical error, cannot handle!\n"); exit(-5); }
+#else 
+#define _CRITICAL { fprintf(stderr, "Critical error, cannot handle!\n"); }
+#endif
+
+
 #define _ERROR(...) { fprintf(stderr, __VA_ARGS__); }
 
 /* --- PRINTF_BYTE_TO_BINARY macro's --- */
