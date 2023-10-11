@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <math.h>
+#include <time.h>
 #include <errno.h>
 
 typedef uint8_t u8;

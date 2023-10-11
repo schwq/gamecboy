@@ -19,21 +19,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    u8 bytes[16] = {0x3C, 0x7E, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x7E, 0x5E, 0x7E, 0x0A, 0x7C, 0x56, 0x38, 0x7C};
-    graphics_tile test_t = convert_memory_to_tile(bytes);
-    FILE* graphics_file = fopen("graphics.txt", "wb");
-    if(graphics_file == NULL) {
-        _ERROR("cannot open graphics file!\n");
-    }
-    int flag = 0;
-    flag = fwrite(&test_t, sizeof(graphics_file), 1, graphics_file);
-    if(flag) {
-        printf("Success in writing to graphics!\n");
-    } else {
-        _ERROR("cannot write to graphics!\n");
-    }
-    fflush(graphics_file);
-    fclose(graphics_file);
 
     init_cpu();
     while(!emu_window.shutdown){ 
