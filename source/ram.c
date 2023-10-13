@@ -1,4 +1,5 @@
 #include "../include/ram.h"
+#include "graphics.h"
 
 ram_context ram;
 
@@ -27,3 +28,8 @@ u8* pointer_to_data_buffer() {
 uint size_of_data_buffer() {
     return ram.data->game_data->buffer_size;
 }
+
+u8* pointer_data_buffer_pos(u16 pos) {
+    return ram.data->game_data->buffer_data[pos]; 
+}
+

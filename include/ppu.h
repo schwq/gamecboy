@@ -21,6 +21,24 @@ access_memory_source video_memory_source();
 
 extern int dots_count;
 
+typedef struct {
+    pixel_object pixels_hold[16];
+    
+} pixel_fifo;
+
+typedef struct {
+    pixel_object pixels[8];
+} fetched_tile;
+
+
+void reset_screen();
+void draw_background_tiles();
+void draw_ppu();
+void ppu_cycle(int cycles);
+void fifo_pixel_fetcher();
+fetched_tile fifo_get_tile(u16 tile_map_addr);
+
+
 
 typedef struct {
     access_video_memory video_access_control;

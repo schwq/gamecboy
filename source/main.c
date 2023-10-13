@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     
     ram.data = malloc(sizeof(cartridge_context));
     ram.data->game_data = malloc(sizeof(data_file));
-    if(!read_data_to_file("source/roms/zelda.gb", ram.data)) {
+    if(!read_data_to_file("cpu_instrs.gb", ram.data)) {
         printf("Cannot load game!\n");
         return -1;
     }
