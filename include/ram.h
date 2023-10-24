@@ -18,10 +18,24 @@
 #define EXTERNAL_RAM_ADDR_END 0xBFFF
 #define EXTERNAL_RAM_SIZE EXTERNAL_RAM_ADDR_END - EXTERNAL_RAM_ADDR_START
 
-#include <cartridge.h> 
+#define OAM_ADDR_START 0xFE00
+#define OAM_ADDR_END 0xFE9F
+#define OAM_ADDR_SIZE OAM_ADDR_END - OAM_ADDR_START
+#define OAM_DMA_TRANSFER_REG 0xFF46
+
+#include <cartridge.h>
+
+// declares with part of the emulator is accessing the ram
+typedef enum {
+  kCPU_MEMORY_SCR,
+  kPPU_MEMORY_SCR,
+  KNONE_MEMORY_SCR
+} memory_access_source;
+
+extern memory_access_source access_source;
 
 typedef struct {
-    cartridge_context* data;
+  cartridge_context* data;
 } ram_context;
 
 extern ram_context ram;

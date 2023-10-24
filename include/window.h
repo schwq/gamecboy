@@ -1,15 +1,18 @@
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
+#include <SDL2/SDL_render.h>
 #include "common.h"
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
+#include <ppu.h>
 
 typedef struct {
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Event event;
-    u32 sdl_flags;
-    bool shutdown;
+  SDL_Window* window;
+  SDL_Renderer* renderer;
+  SDL_Event event;
+  SDL_Texture* texture;
+  u32 sdl_flags;
+  bool shutdown;
 } emulation_window;
 
 extern emulation_window emu_window;
