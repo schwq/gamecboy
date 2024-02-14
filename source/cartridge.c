@@ -1,5 +1,5 @@
 #include "../include/cartridge.h"
-
+#include "../include/ram.h"
 
 static const char *rom_type_to_string[] = {
     "ROM ONLY",
@@ -120,7 +120,7 @@ const char* cart_type_name(cartridge_context* cart) {
 bool cart_header_checksum(cartridge_context* cart) {
     u8 checksum = 0;
     for(u16 addr = 0x0134; addr <= 0x014C; addr++) {
-        checksum = checksum - cart->game_data->buffer_data[addr] - 1;
+        checksum = checksum - ram.ram_data[addr] - 1;
     }
     return (checksum & 0xFF);
 }
@@ -134,12 +134,11 @@ bool read_data_to_file(const char* file_path, cartridge_context* cart) {
 
     printf("Opened game rom: %s\n", file_path);
     fseek(fp, 0, SEEK_END);
-    cart->game_data->buffer_size = ftell(fp);
+    size_t size = ftell(fp);
     rewind(fp);
-    cart->game_data->buffer_data = malloc(cart->game_data->buffer_size);
-    fread(cart->game_data->buffer_data, cart->game_data->buffer_size, 1, fp);
+    fread(ram.ram_data, size, 1, fp);
     fclose(fp);
-    cart->header = (cartridge_header*)(cart->game_data->buffer_data + 0x0100);
+    cart->header = (cartridge_header*)(ram.ram_data + 0x0100);
     printf("Loaded Cartridge:\n");
     printf("\t Title        : %s\n", cart->header->title);
     printf("\t Type:        : %2.2X (%s)\n", cart->header->type, cart_type_name(cart));

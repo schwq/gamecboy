@@ -23,7 +23,7 @@
 #define OAM_ADDR_SIZE OAM_ADDR_END - OAM_ADDR_START
 #define OAM_DMA_TRANSFER_REG 0xFF46
 
-#include <cartridge.h>
+#include "cartridge.h"
 
 // declares with part of the emulator is accessing the ram
 typedef enum {
@@ -36,6 +36,7 @@ extern memory_access_source access_source;
 
 typedef struct {
   cartridge_context* data;
+  u8* ram_data;
 } ram_context;
 
 extern ram_context ram;
@@ -46,5 +47,7 @@ u8* pointer_to_data_buffer();
 uint size_of_data_buffer();
 u8* pointer_data_buffer_pos(u16 pos);
 u32 read_object_attribute(u16 start_addr);
+
+void print_ram_content();
 
 #endif

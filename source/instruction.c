@@ -454,3 +454,24 @@ instruction inst_by_opcode[0x100] = {
 instruction get_instruction(u8 opcode) {
     return inst_by_opcode[opcode];
 }
+
+const char* get_cond_type_string(condition_type type) {
+  switch (type) {
+    case ct_nz:
+      return "ct_nz";
+    case ct_z:
+      return "ct_z";
+    case ct_nc:
+      return "ct_nc";
+    case ct_c:
+      return "ct_c";
+    case ct_none:
+      return "ct_none";
+    default:
+      return "ERROR_NONE";
+  }
+}
+
+
+
+

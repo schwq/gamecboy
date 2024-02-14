@@ -1,0 +1,8 @@
+.cache/
+.vscode/
+gcb
+gcb_cache.txt
+# all gameboy roms must be downloaded by the user
+# we cannot provide nintendo`s game without permission
+*.gb 
+

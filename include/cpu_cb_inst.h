@@ -2,7 +2,7 @@
 #define _CPU_CB_INSTRUCTION_
 
 #include "common.h"
-#include "cpu.h"
+#include "instruction.h"
 
 void cb_prefix_instruction(instruction inst);
 

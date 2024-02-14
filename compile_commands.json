@@ -3,150 +3,150 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/main.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/main.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/main.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/graphics.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/graphics.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/graphics.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/local_time.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/local_time.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/local_time.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/log_file.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/log_file.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/log_file.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/cartridge.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/cartridge.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/cartridge.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/window.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/window.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/window.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/ram.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/ram.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/ram.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/cpu.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/cpu.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/cpu.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/cpu_cb_inst.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/cpu_cb_inst.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/cpu_cb_inst.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   },
   {
     "arguments": [
       "/usr/bin/gcc",
       "-c",
-      "-Wall",
+      "-w",
       "-g",
       "-Iinclude",
       "-o",
       "gcb",
       "source/instruction.c"
     ],
-    "directory": "/home/schwz/projects/gamecboy",
-    "file": "/home/schwz/projects/gamecboy/source/instruction.c",
-    "output": "/home/schwz/projects/gamecboy/gcb"
+    "directory": "/home/schwq/Projects/gamecboy",
+    "file": "/home/schwq/Projects/gamecboy/source/instruction.c",
+    "output": "/home/schwq/Projects/gamecboy/gcb"
   }
 ]

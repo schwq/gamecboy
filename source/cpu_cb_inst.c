@@ -1,5 +1,5 @@
 #include "../include/cpu_cb_inst.h"
-
+#include "../include/cpu.h"
 // Rotate all bits to the left
 void bit_operation_RL(u8* reg, bool carry) {
     u8 bit7 = (*reg & 0x80) >> 7;
@@ -7,7 +7,7 @@ void bit_operation_RL(u8* reg, bool carry) {
     if(carry) {
         *reg = value + bit7;
     } else {
-        *reg = value + GET_CARRY_FLAG()
+        *reg = value + GET_CARRY_FLAG();
     }
 
     SET_HALF_FLAG(0);
@@ -22,7 +22,7 @@ void bit_operation_RL_u16(u16 reg, bool carry) {
     if(carry) {
         write_uint8_data(reg, value + bit7);
     } else {
-        short carry_bit =  GET_CARRY_FLAG()
+        short carry_bit =  GET_CARRY_FLAG();
         write_uint8_data(reg, value + carry_bit);
     }
 
@@ -40,7 +40,7 @@ void bit_operation_RR(u8* reg, bool carry) {
     if(carry) {
         *reg = value + (bit0 << 7);
     } else {
-        short carry_bit = GET_CARRY_FLAG()
+        short carry_bit = GET_CARRY_FLAG();
         *reg = value + (carry_bit << 7);
     }
 
@@ -57,7 +57,7 @@ void bit_operation_RR_u16(u16 reg, bool carry) {
     if(carry) {
         write_uint8_data(reg, value + (bit0 << 7));
     } else {
-        short carry_bit = GET_CARRY_FLAG()
+        short carry_bit = GET_CARRY_FLAG();
          write_uint8_data(reg, value + (carry_bit << 7));
     }
 
@@ -124,7 +124,7 @@ void bit_operation_RRA(bool carry) {
     if(carry) {
         cpu.reg.a = value + (bit0 << 7);
     } else {
-        short carry_bit = GET_CARRY_FLAG()
+        short carry_bit = GET_CARRY_FLAG();
         cpu.reg.a = value + (carry_bit << 7);
     }
 

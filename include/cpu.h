@@ -2,7 +2,6 @@
 #define _CPU_H_
 
 #include "common.h"
-#include "instruction.h"
 #include "cartridge.h"
 #include "ram.h"
 #include "cpu_cb_inst.h"
@@ -46,9 +45,12 @@ typedef struct {
     instruction current_inst;
     u8 current_opcode;
     bool paused;
+    bool pc_can_increment;
     u8 result;
     u8 c_op01;
     u8 c_op02;
+    int last_zero_flag;
+    int last_carry_flag;
     uint total_cycles; // some instructions can change the number of cycles depending of condition
 } cpu_context;
 
@@ -86,6 +88,8 @@ void decrement_reg(reg_set reg, uint decrement);
 void set_flag(cpu_flags flag, int value);
 short get_flag(cpu_flags flag);
 bool cpu_check_cond(condition_type cond);
+
+void print_flags_info();
 
 // instruction functions proc
 void LD_proc(instruction inst);

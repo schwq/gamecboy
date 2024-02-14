@@ -44,6 +44,8 @@ typedef unsigned int uint;
 
 #define _ERROR(...) { fprintf(stderr, __VA_ARGS__); }
 
+#define HEX_PATTERN "0x%2.2X" 
+
 /* --- PRINTF_BYTE_TO_BINARY macro's --- */
 #define PRINTF_BINARY_SEPARATOR
 #define PRINTF_BINARY_PATTERN_INT8 "%c%c%c%c%c%c%c%c"

@@ -65,11 +65,14 @@ void handle_window_input()
 
 void render_window()
 {
+  emu_window.texture
+
   SDL_UpdateTexture(emu_window.texture, NULL, sdl2_pixels,
                     EMULATOR_SCREEN_X * sizeof(Uint8));
   SDL_RenderClear(emu_window.renderer);
   SDL_RenderCopy(emu_window.renderer, emu_window.texture, NULL, NULL);
   SDL_RenderPresent(emu_window.renderer);
+
 }
 
 void terminate_window()
