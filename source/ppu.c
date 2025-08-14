@@ -8,13 +8,19 @@
 
 void init_ppu()
 {
-  size_t size = sizeof(pixel_object) * EMULATOR_SCREEN_X * EMULATOR_SCREEN_Y;
-  sdl2_pixels = malloc(size);
+  const size_t sz = EMULATOR_SCREEN_X * EMULATOR_SCREEN_Y;
+  framebuffer = (u8*)malloc(sz * sizeof(u8));
+  if (!framebuffer) {
+    _ERROR("Failed to allocate framebuffer");
+    _CRITICAL
+  }
+
+  memset(framebuffer, 0x00, sz);
 }
 
 void terminate_ppu()
 {
-  free(sdl2_pixels);
+  free(framebuffer);
 }
 // drawing pixels
 void execute_ppu_mode3() {}
@@ -61,7 +67,7 @@ void draw_ppu()  // represent a frame
   create_graphics_objects();
 
   size_t sizecpy = sizeof(pixel_object) * EMULATOR_SCREEN_X * EMULATOR_SCREEN_Y;
-  memcpy(sdl2_pixels, &graphics_buffer, sizecpy);
+  memcpy(framebuffer, &graphics_buffer, sizecpy);
 }
 
 void fifo_pixel_fetcher()
@@ -78,7 +84,7 @@ void fifo_pixel_fetcher()
     tile_map_addr_used = TILE_MAP_ADDR_0;
   }
 
-  fetched_tile pixels_extracted_from_tile = fifo_get_tile(tile_map_addr_used);
+  //fetched_tile pixels_extracted_from_tile = fifo_get_tile(tile_map_addr_used);
 }
 
 void reset_screen()

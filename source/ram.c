@@ -1,41 +1,58 @@
 #include "../include/ram.h"
 #include "graphics.h"
 
-ram_context ram;
+ram_context ram = {0};
 
-u8 read_uint8_data(u16 addr)
+u8 wram_read(u16 addr)
 {
-  // todo implement ram
-  if (addr > 0xffff) {
-    _ERROR("ram_read_addr_out_of_range_error!\n");
+  addr -= 0xC000;
+
+  if (addr >= 0x2000) {
+    logfmt(lerror, "WRAM memory read out of range " HEX_PATTERN, addr + 0xC000);
+    _CRITICAL
+    return 0xFF;
   }
-  else {
-    return ram.ram_data[addr];
-  }
-  return 0;
+
+  return ram.wram[addr];
 }
 
-void write_uint8_data(u16 addr, u8 value)
+u8 hram_read(u16 addr)
 {
-  if (addr > 0xffff) {
-    _ERROR("ram_write_addr_out_of_range_error! Addr " HEX_PATTERN "\n", addr);
+  addr -= 0xFF80;
+
+  if (addr >= 0x80) {
+    logfmt(lerror, "HRAM memory read out of range " HEX_PATTERN, addr + 0xFF80);
+    _CRITICAL
+    return 0xFF;
   }
 
-  else {
-    ram.ram_data[addr] = value;
-  }
+  return ram.hram[addr];
 }
 
-uint size_of_data_buffer()
+void wram_write(u16 addr, u8 value)
 {
-  return ram.data->game_data->buffer_size;
+  addr -= 0xC000;
+
+  if (addr >= 0x2000) {
+    logfmt(lerror, "WRAM memory write out of range " HEX_PATTERN,
+           addr + 0xC000);
+    _CRITICAL
+    return;
+  }
+
+  ram.wram[addr] = value;
 }
 
-void print_ram_content() {
-  printf("Printing content of ram\n");
-  for(unsigned int x = 0x0100; x < 0x0110; x++) {
-     
-      
-    printf(HEX_PATTERN " ", ram.ram_data[x]);
+void hram_write(u16 addr, u8 value)
+{
+  addr -= 0xFF80;
+
+  if (addr >= 0x80) {
+    logfmt(lerror, "HRAM memory write out of range " HEX_PATTERN,
+           addr + 0xFF80);
+    _CRITICAL
+    return;
   }
+
+  ram.hram[addr] = value;
 }

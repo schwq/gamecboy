@@ -1,5 +1,4 @@
-#ifndef _PPU_H_
-#define _PPU_H_
+#pragma once
 
 #include <common.h>
 #include <graphics.h>
@@ -36,5 +35,3 @@ void execute_ppu_mode0();
 void execute_ppu_mode1();
 void execute_ppu_mode2();
 void execute_ppu_mode3();
-
-#endif

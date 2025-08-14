@@ -11,7 +11,7 @@ pixel_object background_buffer[BACKGROUND_SCREEN_X][BACKGROUND_SCREEN_Y];
 graphics_context graphics_ctx;
 vram_tile_data_addr_mode tile_data_addr_mode = kADDR_MODE_8000;
 rendering_periods current_period = kRENDER_WINDOW;
-Uint8* sdl2_pixels;
+u8* framebuffer;
 screen_coordinates scanline_pos;
 ppu_mode current_ppu_mode = kMODE_NONE;
 color_palette bg_color;
@@ -409,11 +409,13 @@ short get_object_flag_y_flip(graphics_object object)
   u8 obj_byte = object.attributes.bytes[3];
   return BIT(obj_byte, 6);
 }
+
 short get_object_flag_x_flip(graphics_object object)
 {
   u8 obj_byte = object.attributes.bytes[3];
   return BIT(obj_byte, 5);
 }
+
 short get_object_flag_dmg_palette(graphics_object object)
 {
   u8 obj_byte = object.attributes.bytes[3];

@@ -1,5 +1,4 @@
-#ifndef _GRAPHICS_H_
-#define _GRAPHICS_H_
+#pragma once
 
 #include <SDL2/SDL_pixels.h>
 #include <SDL2/SDL_stdinc.h>
@@ -121,13 +120,13 @@ typedef struct {
 // video buffer, the current video being display
 extern pixel_object background_buffer[BACKGROUND_SCREEN_X][BACKGROUND_SCREEN_Y];
 extern pixel_object graphics_buffer[EMULATOR_SCREEN_X][EMULATOR_SCREEN_Y];
-extern Uint8* sdl2_pixels;
+extern Uint8* framebuffer;
 
 #define TILE_DATA_BLOCK0_START 0x8000
 #define TILE_DATA_BLOCK0_END 0x87FF
 #define TILE_DATA_BLOCK1_START 0x8800
 #define TILE_DATA_BLOCK1_END 0x08FFF
-#define TILE_DATA_BLOCK2_START 0x9000SDL_PIXELFORMAT_ARGB4444
+#define TILE_DATA_BLOCK2_START 0x9000
 #define TILE_DATA_BLOCK2_END 0x97FF
 
 typedef enum {
@@ -278,5 +277,3 @@ short get_object_flag_x_flip(graphics_object object);
 short get_object_flag_dmg_palette(graphics_object object);
 
 void generate_graphics_context(graphics_context* graphics);
-
-#endif

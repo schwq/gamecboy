@@ -4,9 +4,7 @@
 #include <SDL2/SDL_stdinc.h>
 #include "../include/common.h"
 #include "graphics.h"
-// must be just one window for the whole emulation
 emulation_window emu_window;
-
 // this must be called before malloc create pointers to cpu and ram! otherwise we are going to have a leak!
 // TODO: implementation and management of malloc and pointer in case of _CRITICAL call and errors!
 void init_window(u32 flags, const char* window_name, uint size_x, uint size_y)
@@ -37,21 +35,27 @@ void init_window(u32 flags, const char* window_name, uint size_x, uint size_y)
     _CRITICAL
   }
 
-  SDL_CreateTexture(emu_window.renderer, SDL_PIXELFORMAT_ARGB8888,
-                    SDL_TEXTUREACCESS_STATIC, EMULATOR_SCREEN_X,
-                    EMULATOR_SCREEN_Y);
+  emu_window.texture = SDL_CreateTexture(
+      emu_window.renderer, SDL_PIXELFORMAT_ARGB8888,
+      SDL_TEXTUREACCESS_STREAMING, EMULATOR_SCREEN_X, EMULATOR_SCREEN_Y);
 
   printf("Created SDL2 window!\n");
 }
 
 void handle_window_input()
 {
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
 
-  while (SDL_PollEvent(&emu_window.event)) {
-
-    switch (emu_window.event.type) {
+    switch (event.type) {
       case SDL_QUIT:
         emu_window.shutdown = true;
+        break;
+      case SDL_KEYDOWN:
+        gamepad_set_keysym(event.key.keysym.sym, true);
+        break;
+      case SDL_KEYUP:
+        gamepad_set_keysym(event.key.keysym.sym, false);
         break;
     }
 
@@ -63,20 +67,43 @@ void handle_window_input()
   }
 }
 
+static Uint32 gb_palette[4] = {
+    0xFFFFFFFF,  // white
+    0xAAAAAAFF,  // light gray
+    0x555555FF,  // dark gray
+    0x000000FF   // black
+};
+
 void render_window()
 {
-  emu_window.texture
+  void* tex_pixels;
+  int pitch;
 
-  SDL_UpdateTexture(emu_window.texture, NULL, sdl2_pixels,
-                    EMULATOR_SCREEN_X * sizeof(Uint8));
+  if (SDL_LockTexture(emu_window.texture, NULL, &tex_pixels, &pitch) != 0) {
+    SDL_Log("SDL_LockTexture Error: %s", SDL_GetError());
+    return;
+  }
+
+  Uint32* dst = (Uint32*)tex_pixels;
+
+  for (int y = 0; y < 144; y++) {
+    for (int x = 0; x < 160; x++) {
+      int index = y * 160 + x;
+      uint8_t color_index = framebuffer[index] & 0x03;  // Ensure it's 0–3
+      dst[y * (pitch / 4) + x] = gb_palette[color_index];
+    }
+  }
+
+  SDL_UnlockTexture(emu_window.texture);
+
   SDL_RenderClear(emu_window.renderer);
   SDL_RenderCopy(emu_window.renderer, emu_window.texture, NULL, NULL);
   SDL_RenderPresent(emu_window.renderer);
-
 }
 
 void terminate_window()
 {
+  SDL_DestroyTexture(emu_window.texture);
   SDL_DestroyRenderer(emu_window.renderer);
   SDL_DestroyWindow(emu_window.window);
   SDL_Quit();

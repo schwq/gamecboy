@@ -1,57 +1,51 @@
-#ifndef _CPU_H_
-#define _CPU_H_
+#pragma once
 
-#include "common.h"
 #include "cartridge.h"
-#include "ram.h"
+#include "common.h"
 #include "cpu_cb_inst.h"
+#include "ram.h"
 
-typedef enum {
-    fZero = 7,
-    fSubtraction = 6,
-    fHalf = 5, 
-    fCarry = 4
-} cpu_flags;
+typedef enum { cf_zero = 7, cf_sub = 6, cf_half = 5, cf_carry = 4 } cpu_flags;
 
 typedef struct {
-    u8 a;
-    u8 f;
-    u8 b;
-    u8 c;
-    u8 d;
-    u8 e;
-    u8 h;
-    u8 l;
-    u16 pc;
-    u16 sp;
-    u8 error_reg;
+  u8 a;
+  u8 f;
+  u8 b;
+  u8 c;
+  u8 d;
+  u8 e;
+  u8 h;
+  u8 l;
+  u16 pc;
+  u16 sp;
+  u8 error_reg;
 } cpu_registers;
 
 u16 reverse_value(u16 num);
 u16 cpu_read_reg(reg_set type);
-u16* cpu_read_pointer_u16(reg_set type);
 void cpu_write_reg(reg_set type, u16 value);
 
 typedef struct {
-    bool ime;
-    bool halted;
-    bool ime_scheduled;
-    bool shutdown;
+  bool ime;
+  bool halted;
+  bool ime_scheduled;
+  bool shutdown;
 } control_state;
 
 typedef struct {
-    cpu_registers reg;
-    control_state control;
-    instruction current_inst;
-    u8 current_opcode;
-    bool paused;
-    bool pc_can_increment;
-    u8 result;
-    u8 c_op01;
-    u8 c_op02;
-    int last_zero_flag;
-    int last_carry_flag;
-    uint total_cycles; // some instructions can change the number of cycles depending of condition
+  cpu_registers reg;
+  control_state control;
+  instruction current_inst;
+  u8 current_opcode;
+  bool paused;
+  bool pc_can_increment;
+  u8 result;
+  u8 c_op01;
+  u8 c_op02;
+  int last_zero_flag;
+  int last_carry_flag;
+  uint
+      total_cycles;  // some instructions can change the number of cycles depending of condition
 } cpu_context;
 
 extern cpu_context cpu;
@@ -65,8 +59,12 @@ extern cpu_context cpu;
 #define GET_SUB_FLAG() BIT(cpu.reg.f, 6);
 #define GET_HALF_FLAG() BIT(cpu.reg.f, 5);
 
-#define SHUTDOWN_CPU() cpu.control.shutdown = true;
-#define PRINTF_ERROR_PC_REG "[%2.2X]\n", cpu.reg.pc
+#define SHUTDOWN_CPU()           \
+  {                              \
+    printf("Shutdown CPU");      \
+    cpu.control.shutdown = true; \
+  }
+#define PRINTF_ERROR_PC_REG HEX_PATTERN "\n", cpu.reg.pc
 
 extern u16 u8_to_u16(u8 lsb, u8 msb);
 extern u8 lsb(u16 number);
@@ -108,5 +106,3 @@ void JR_proc(instruction inst);
 void CALL_proc(instruction inst);
 void RET_proc(instruction inst);
 void RST_proc(instruction inst);
-
-#endif

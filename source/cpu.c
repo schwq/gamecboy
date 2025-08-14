@@ -1,4 +1,5 @@
 #include "../include/cpu.h"
+#include <bus.h>
 #include "../include/instruction.h"
 #include "common.h"
 
@@ -33,10 +34,11 @@ void print_flags_info()
 short get_flag(cpu_flags flag)
 {
   switch (flag) {
-    case fZero:
-      return GET_ZERO_FLAG() case fHalf : return GET_HALF_FLAG() case fCarry
-          : return GET_CARRY_FLAG() case fSubtraction
-          : return GET_SUB_FLAG() default
+    case cf_zero:
+    return GET_ZERO_FLAG() case cf_half:
+    return GET_HALF_FLAG() case cf_carry:
+    return GET_CARRY_FLAG() case cf_sub:
+      return GET_SUB_FLAG() default
           : _ERROR("cpu_get_flag_invalid_flag_requested! returning 0!");
       return 0;
   }
@@ -45,16 +47,16 @@ short get_flag(cpu_flags flag)
 void set_flag(cpu_flags flag, int value)
 {
   switch (flag) {
-    case fZero:
+    case cf_zero:
       SET_ZERO_FLAG(value);
       break;
-    case fHalf:
+    case cf_half:
       SET_HALF_FLAG(value);
       break;
-    case fCarry:
+    case cf_carry:
       SET_CARRY_FLAG(value);
       break;
-    case fSubtraction:
+    case cf_sub:
       SET_SUB_FLAG(value);
       break;
     default:
@@ -69,13 +71,13 @@ void affected_flags(const char flags[4])
     return;
   switch (flags[0]) {
     case 'z':
-      cpu.result == 0 ? set_flag(fZero, 1) : set_flag(fZero, 0);
+      cpu.result == 0 ? set_flag(cf_zero, 1) : set_flag(cf_zero, 0);
       break;
     case '0':
-      set_flag(fZero, 0);
+      set_flag(cf_zero, 0);
       break;
     case '1':
-      set_flag(fZero, 1);
+      set_flag(cf_zero, 1);
       break;
     case '-':
       break;
@@ -85,10 +87,10 @@ void affected_flags(const char flags[4])
 
   switch (flags[1]) {
     case '0':
-      set_flag(fSubtraction, 0);
+      set_flag(cf_sub, 0);
       break;
     case '1':
-      set_flag(fSubtraction, 1);
+      set_flag(cf_sub, 1);
       break;
     case '-':
       break;
@@ -100,14 +102,14 @@ void affected_flags(const char flags[4])
     case 'h':
       // carry bit in the 3 4 bit
       (((cpu.c_op01 & 0xf) + (cpu.c_op02 & 0xf)) & 0x10) == 0x10
-          ? set_flag(fHalf, 1)
-          : set_flag(fHalf, 0);
+          ? set_flag(cf_half, 1)
+          : set_flag(cf_half, 0);
       break;
     case '0':
-      set_flag(fHalf, 0);
+      set_flag(cf_half, 0);
       break;
     case '1':
-      set_flag(fHalf, 1);
+      set_flag(cf_half, 1);
       break;
     case '-':
       break;
@@ -118,14 +120,14 @@ void affected_flags(const char flags[4])
   switch (flags[3]) {
     case 'c':
       // carry bit in the 7 bit
-      ((cpu.c_op01 + cpu.c_op02) > 0xff) ? set_flag(fCarry, 1)
-                                         : set_flag(fCarry, 0);
+      ((cpu.c_op01 + cpu.c_op02) > 0xff) ? set_flag(cf_carry, 1)
+                                         : set_flag(cf_carry, 0);
       break;
     case '0':
-      set_flag(fCarry, 0);
+      set_flag(cf_carry, 0);
       break;
     case '1':
-      set_flag(fCarry, 1);
+      set_flag(cf_carry, 1);
       break;
     case '-':
       break;
@@ -181,7 +183,7 @@ u16 cpu_read_reg(reg_set type)
     case reg_l:
       return cpu.reg.l;
     case reg_immediate_u8:
-      return read_uint8_data(++cpu.reg.pc);
+      return bus_read(++cpu.reg.pc);
 
     case reg_af:
       return reverse_value(*((u16*)&cpu.reg.a));
@@ -275,13 +277,8 @@ void cpu_write_reg(reg_set type, u16 value)
   }
 }
 
-void run_cpu()
+static void print_curr_cpu(instruction inst)
 {
-  cpu.pc_can_increment = true;
-  instruction inst = get_instruction(read_uint8_data(cpu.reg.pc));
-
-  cpu.current_opcode = read_uint8_data(cpu.reg.pc);
-
   printf(
       "[INST]: %s [OP01]: %s [OP01]: %s [ADDR]: %s [OPCODE]: 0x%2.2X [PC]: "
       "0x%2.2X ",
@@ -292,11 +289,22 @@ void run_cpu()
   print_flags_info();
   printf("reg b " HEX_PATTERN ", reg c " HEX_PATTERN " \n", cpu_read_reg(reg_b),
          cpu_read_reg(reg_c));
-  if (DG_STOP_AT_RST_IN) {
+}
+
+void run_cpu()
+{
+  cpu.pc_can_increment = true;
+  instruction inst = get_instruction(bus_read(cpu.reg.pc));
+
+  cpu.current_opcode = bus_read(cpu.reg.pc);
+
+  print_curr_cpu(inst);
+
+  /* if (DG_STOP_AT_RST_IN) {
     if (inst.inst_mnemonic == in_rst) {
       cpu.control.shutdown = true;
     }
-  }
+  } */
 
   fetch_cpu(inst);
 
@@ -348,14 +356,13 @@ void fetch_cpu(instruction inst)
       break;
     case in_push:
       cpu.reg.sp--;
-      write_uint8_data(cpu.reg.sp--, msb(cpu_read_reg(inst.op01)));
-      write_uint8_data(cpu.reg.sp, lsb(cpu_read_reg(inst.op01)));
+      bus_write(cpu.reg.sp--, msb(cpu_read_reg(inst.op01)));
+      bus_write(cpu.reg.sp, lsb(cpu_read_reg(inst.op01)));
       break;
     case in_pop: {
       u16 addr1 = cpu.reg.sp++;
       u16 addr2 = cpu.reg.sp++;
-      cpu_write_reg(inst.op01,
-                    u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2)));
+      cpu_write_reg(inst.op01, u8_to_u16(bus_read(addr1), bus_read(addr2)));
     } break;
     case in_add:
       ADD_proc(inst);
@@ -420,7 +427,7 @@ void fetch_cpu(instruction inst)
     case in_reti: {
       u16 addr1 = cpu.reg.sp++;
       u16 addr2 = cpu.reg.sp++;
-      cpu.reg.pc = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+      cpu.reg.pc = u8_to_u16(bus_read(addr1), bus_read(addr2));
       cpu.control.ime = 1;
     } break;
     case in_rst:
@@ -468,81 +475,81 @@ void LD_proc(instruction inst)
       cpu_write_reg(inst.op01, cpu_read_reg(inst.op02));
       break;
     case am_r_d8:
-      cpu_write_reg(inst.op01, read_uint8_data(++cpu.reg.pc));
+      cpu_write_reg(inst.op01, bus_read(++cpu.reg.pc));
       break;
     case am_hli_r:  //0x22
-      write_uint8_data(cpu_read_reg(reg_hl), cpu_read_reg(inst.op02));
+      bus_write(cpu_read_reg(reg_hl), cpu_read_reg(inst.op02));
       increment_reg(reg_hl, 1);
       break;
     case am_r_hld:
       // LD A, (HL-): Load accumulator (indirect HL, decrement)
-      cpu_write_reg(reg_a, read_uint8_data(cpu_read_reg(reg_hl)));
+      cpu_write_reg(reg_a, bus_read(cpu_read_reg(reg_hl)));
       decrement_reg(reg_hl, 1);
       break;
     case am_a16_r: {
       u16 addr1 = ++cpu.reg.pc;
       u16 addr2 = ++cpu.reg.pc;
-      u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+      u16 nn = u8_to_u16(bus_read(addr1), bus_read(addr2));
       if (cpu.current_opcode == 0x08) {
-        write_uint8_data(nn, lsb(cpu.reg.sp));
-        write_uint8_data(nn + 1, msb(cpu.reg.sp));
+        bus_write(nn, lsb(cpu.reg.sp));
+        bus_write(nn + 1, msb(cpu.reg.sp));
       }
       else {
-        write_uint8_data(nn, (u8)cpu_read_reg(inst.op02));
+        bus_write(nn, (u8)cpu_read_reg(inst.op02));
       }
       break;
     }
     case am_r_d16: {
       u16 addr1 = ++cpu.reg.pc;
       u16 addr2 = ++cpu.reg.pc;
-      u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+      u16 nn = u8_to_u16(bus_read(addr1), bus_read(addr2));
       cpu_write_reg(inst.op01, nn);
       break;
     }
     case am_r_a16: {
       u16 addr1 = ++cpu.reg.pc;
       u16 addr2 = ++cpu.reg.pc;
-      u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
-      cpu_write_reg(inst.op01, read_uint8_data(nn));
+      u16 nn = u8_to_u16(bus_read(addr1), bus_read(addr2));
+      cpu_write_reg(inst.op01, bus_read(nn));
       break;
     }
     case am_r_mr:
       // LDH A, (C): Load accumulator (indirect 0xFF00+C)
       cpu_write_reg(inst.op01,
-                    read_uint8_data(u8_to_u16(cpu_read_reg(inst.op02), 0xFF)));
+                    bus_read(u8_to_u16(cpu_read_reg(inst.op02), 0xFF)));
       break;
     case am_mr_r:
       // LDH (C), A: Load from accumulator (indirect 0xFF00+C)
-      write_uint8_data(u8_to_u16(cpu_read_reg(inst.op01), 0xFF),
-                       cpu_read_reg(inst.op02));
+      bus_write(u8_to_u16(cpu_read_reg(inst.op01), 0xFF),
+                cpu_read_reg(inst.op02));
       break;
     case am_r_a8:
       // LDH A, (n): Load accumulator (direct 0xFF00+n)
       {
-        u8 n = read_uint8_data(++cpu.reg.pc);
+        u8 n = bus_read(++cpu.reg.pc);
         cpu_write_reg(inst.op01, u8_to_u16(n, 0xFF));
         break;
       }
     case am_a8_r:
       // LDH (n), A: Load from accumulator (direct 0xFF00+n)
       {
-        u8 n = read_uint8_data(++cpu.reg.pc);
-        write_uint8_data(u8_to_u16(n, 0xFF), cpu_read_reg(inst.op02));
+        u8 n = bus_read(++cpu.reg.pc);
+        bus_write(u8_to_u16(n, 0xFF), cpu_read_reg(inst.op02));
         break;
       }
     case am_hld_r:
       // LD (HL-), A: Load from accumulator (indirect HL, decrement)
-      write_uint8_data(cpu_read_reg(reg_hl), cpu_read_reg(inst.op02));
+      bus_write(cpu_read_reg(reg_hl), cpu_read_reg(inst.op02));
       decrement_reg(reg_hl, 1);
       break;
     case am_r_hli:
       // LD A, (HL+): Load accumulator (indirect HL, increment)
-      cpu_write_reg(inst.op01, read_uint8_data(cpu_read_reg(reg_hl)));
+      cpu_write_reg(inst.op01, bus_read(cpu_read_reg(reg_hl)));
       increment_reg(reg_hl, 1);
       break;
     case am_mr_d8: {
-      u8 nn = read_uint8_data(++cpu.reg.pc);
-      write_uint8_data(cpu_read_reg(reg_hl), nn);
+      u8 nn = bus_read(++cpu.reg.pc);
+      bus_write(cpu_read_reg(reg_hl), nn);
     } break;
     default:
       _ERROR(
@@ -569,7 +576,7 @@ void ADD_proc(instruction inst)
     case am_r_mr:
       //ADD (HL): Add (indirect HL)
       {
-        u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+        u8 data = bus_read(cpu_read_reg(inst.op02));
         cpu.c_op01 = data;
         cpu.c_op02 = cpu_read_reg(inst.op01);
         data += cpu_read_reg(inst.op01);
@@ -578,7 +585,7 @@ void ADD_proc(instruction inst)
       }
       break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       cpu.c_op01 = data;
       cpu.c_op02 = cpu_read_reg(inst.op01);
       data += cpu_read_reg(inst.op01);
@@ -606,7 +613,7 @@ void ADC_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
       cpu.c_op01 = data;
       cpu.c_op02 = cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
       data += cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
@@ -614,7 +621,7 @@ void ADC_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       cpu.c_op01 = data;
       cpu.c_op02 = cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
       data += cpu_read_reg(inst.op01) + GET_CARRY_FLAG();
@@ -641,7 +648,7 @@ void SUB_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
       cpu.c_op01 = data;
       cpu.c_op02 = -(cpu_read_reg(inst.op01));
       data -= cpu_read_reg(inst.op01);
@@ -649,7 +656,7 @@ void SUB_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       cpu.c_op01 = data;
       cpu.c_op02 = -(cpu_read_reg(inst.op01));
       data -= cpu_read_reg(inst.op01);
@@ -672,22 +679,22 @@ void SBC_proc(instruction inst)
       u8 data =
           cpu_read_reg(inst.op01) - cpu_read_reg(inst.op02) - GET_CARRY_FLAG();
       cpu.c_op01 = cpu_read_reg(inst.op01);
-      cpu.c_op02 = -(cpu_read_reg(inst.op02) - get_flag(fCarry));
+      cpu.c_op02 = -(cpu_read_reg(inst.op02) - get_flag(cf_carry));
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
-      cpu.c_op01 = read_uint8_data(cpu_read_reg(inst.op02));
-      cpu.c_op02 = -(cpu_read_reg(inst.op01) - get_flag(fCarry));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
+      cpu.c_op01 = bus_read(cpu_read_reg(inst.op02));
+      cpu.c_op02 = -(cpu_read_reg(inst.op01) - get_flag(cf_carry));
       data -= cpu_read_reg(inst.op01) - GET_CARRY_FLAG();
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
-      cpu.c_op01 = read_uint8_data(++cpu.reg.pc);
-      cpu.c_op02 = -(cpu_read_reg(inst.op01) - get_flag(fCarry));
+      u8 data = bus_read(++cpu.reg.pc);
+      cpu.c_op01 = bus_read(++cpu.reg.pc);
+      cpu.c_op02 = -(cpu_read_reg(inst.op01) - get_flag(cf_carry));
       data -= cpu_read_reg(inst.op01) - GET_CARRY_FLAG();
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
@@ -711,14 +718,14 @@ void CP_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
       cpu.c_op01 = data;
       cpu.c_op02 = -(cpu_read_reg(inst.op01));
       data -= cpu_read_reg(inst.op01);
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       cpu.c_op01 = data;
       cpu.c_op02 = -(cpu_read_reg(++cpu.reg.pc));
       data -= cpu_read_reg(inst.op01);
@@ -744,10 +751,10 @@ void INC_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op01)) + 1;
-      cpu.c_op01 = read_uint8_data(cpu_read_reg(inst.op01));
+      u8 data = bus_read(cpu_read_reg(inst.op01)) + 1;
+      cpu.c_op01 = bus_read(cpu_read_reg(inst.op01));
       cpu.c_op02 = 1;
-      write_uint8_data(cpu_read_reg(inst.op01), data);
+      bus_write(cpu_read_reg(inst.op01), data);
       cpu.result = data;
     } break;
     default:
@@ -770,10 +777,10 @@ void DEC_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op01)) - 1;
-      cpu.c_op01 = read_uint8_data(cpu_read_reg(inst.op01));
+      u8 data = bus_read(cpu_read_reg(inst.op01)) - 1;
+      cpu.c_op01 = bus_read(cpu_read_reg(inst.op01));
       cpu.c_op02 = -1;
-      write_uint8_data(cpu_read_reg(inst.op01), data);
+      bus_write(cpu_read_reg(inst.op01), data);
       cpu.result = data;
     } break;
     default:
@@ -794,13 +801,13 @@ void AND_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
       data &= cpu_read_reg(inst.op01);
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       data &= cpu_read_reg(inst.op01);
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
@@ -823,13 +830,13 @@ void OR_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
       data |= cpu_read_reg(inst.op01);
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       data |= cpu_read_reg(inst.op01);
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
@@ -852,13 +859,13 @@ void XOR_proc(instruction inst)
       cpu.result = data;
     } break;
     case am_r_mr: {
-      u8 data = read_uint8_data(cpu_read_reg(inst.op02));
+      u8 data = bus_read(cpu_read_reg(inst.op02));
       data ^= cpu_read_reg(inst.op01);
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
     } break;
     case am_r_d8: {
-      u8 data = read_uint8_data(++cpu.reg.pc);
+      u8 data = bus_read(++cpu.reg.pc);
       data ^= cpu_read_reg(inst.op01);
       cpu_write_reg(inst.op01, data);
       cpu.result = data;
@@ -882,7 +889,7 @@ void JP_proc(instruction inst)
     case am_d16: {
       u16 addr1 = ++cpu.reg.pc;
       u16 addr2 = ++cpu.reg.pc;
-      u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+      u16 nn = u8_to_u16(bus_read(addr1), bus_read(addr2));
       if (cpu.current_opcode == 0xC3) {
         cpu.reg.pc = nn;
         cpu.pc_can_increment = false;
@@ -907,7 +914,7 @@ void JR_proc(instruction inst)
 {
   switch (inst.address_mode) {
     case am_d8: {
-      int8_t nn = (int8_t)read_uint8_data(++cpu.reg.pc);
+      int8_t nn = (int8_t)bus_read(++cpu.reg.pc);
       if (cpu.current_opcode == 0x18) {
         cpu.reg.pc += nn;
       }
@@ -934,18 +941,18 @@ void CALL_proc(instruction inst)
     case am_d16: {
       u16 addr1 = ++cpu.reg.pc;
       u16 addr2 = ++cpu.reg.pc;
-      u16 nn = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+      u16 nn = u8_to_u16(bus_read(addr1), bus_read(addr2));
       if (cpu.current_opcode == 0xCD) {
         cpu.reg.sp--;
-        write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
-        write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
+        bus_write(cpu.reg.sp--, msb(cpu.reg.pc));
+        bus_write(cpu.reg.sp, lsb(cpu.reg.pc));
         cpu.reg.pc = nn;
       }
       else {
         if (cpu_check_cond(inst.cond_type)) {
           cpu.reg.sp--;
-          write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
-          write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
+          bus_write(cpu.reg.sp--, msb(cpu.reg.pc));
+          bus_write(cpu.reg.sp, lsb(cpu.reg.pc));
           cpu.reg.pc = nn;
         }
       }
@@ -966,18 +973,17 @@ void RET_proc(instruction inst)
       u16 addr1 = cpu.reg.sp++;
       u16 addr2 = cpu.reg.sp++;
       if (cpu.current_opcode == 0xC9) {
-        cpu.reg.pc = u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+        cpu.reg.pc = u8_to_u16(bus_read(addr1), bus_read(addr2));
       }
       else {
         if (cpu_check_cond(inst.cond_type)) {
-          cpu.reg.pc =
-              u8_to_u16(read_uint8_data(addr1), read_uint8_data(addr2));
+          cpu.reg.pc = u8_to_u16(bus_read(addr1), bus_read(addr2));
         }
       }
     } break;
     case am_none: {
-      u8 data1 = read_uint8_data(cpu.reg.sp++);
-      u8 data2 = read_uint8_data(cpu.reg.sp++);
+      u8 data1 = bus_read(cpu.reg.sp++);
+      u8 data2 = bus_read(cpu.reg.sp++);
       cpu.reg.pc = u8_to_u16(data1, data2);
     } break;
     default:
@@ -995,8 +1001,8 @@ void RST_proc(instruction inst)
     case am_imp:
       // todo check func
       cpu.reg.sp--;
-      write_uint8_data(cpu.reg.sp--, msb(cpu.reg.pc));
-      write_uint8_data(cpu.reg.sp, lsb(cpu.reg.pc));
+      bus_write(cpu.reg.sp--, msb(cpu.reg.pc));
+      bus_write(cpu.reg.sp, lsb(cpu.reg.pc));
       cpu.reg.pc = u8_to_u16(inst.param, 0x00);
       break;
     default:

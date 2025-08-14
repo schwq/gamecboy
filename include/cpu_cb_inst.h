@@ -1,5 +1,4 @@
-#ifndef _CPU_CB_INSTRUCTION_
-#define _CPU_CB_INSTRUCTION_
+#pragma once
 
 #include "common.h"
 #include "instruction.h"
@@ -18,7 +17,7 @@ void bit_operation_swap_u16(u16 reg);
 // Test a bit for value, if its 1, then ZERO flag is set, else nothing happens
 void bit_operation_test(u8* reg, int bit);
 void bit_operation_test_u16(u16 reg, int bit);
-// Reset a bit to 0 
+// Reset a bit to 0
 void bit_operation_reset(u8* reg, int bit);
 void bit_operation_reset_u16(u16 reg, int bit);
 // Rotate A right through carry
@@ -35,5 +34,3 @@ void bit_operation_SRA_u16(u16 reg);
 // Sets a bit to 1
 void bit_operation_set(u8* reg, int bit);
 void bit_operation_set_u16(u16 reg, int bit);
-
-#endif
