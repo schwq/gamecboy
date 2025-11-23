@@ -6,19 +6,20 @@ project(gamecboy)
 set(sourceFiles
     source/main.c 
     source/io.c
-    source/graphics.c  
     source/cartridge.c 
-    source/window.c 
     source/serial.c
     source/ram.c 
     source/cpu.c
-    source/ppu.c 
     source/cpu_cb_inst.c 
     source/instruction.c
     source/common.c
     source/interrupt.c
     source/gamepad.c
     source/timer.c
+    source/dma.c
+    source/ppu.c
+    source/emulator.c
+    source/window.c
 )
 
 add_executable(gamecboy ${sourceFiles})

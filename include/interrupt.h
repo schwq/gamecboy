@@ -4,19 +4,12 @@
 
 typedef enum {
 
-  INT_VBLANK,
-  INT_LCD,
-  INT_TIMER,
-  INT_SERIAL,
-  INT_JOYPAD
+  INT_VBLANK = 1,
+  INT_LCD = 2,
+  INT_TIMER = 4,
+  INT_SERIAL = 8,
+  INT_JOYPAD = 16
 
 } interrupt_type;
 
-typedef struct {
-
-  u8 ime;
-  u8 ie;
-
-} interrupt_context;
-
-extern interrupt_context interrupt;
+void int_handle_interrupt();

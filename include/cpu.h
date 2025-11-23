@@ -42,6 +42,10 @@ typedef struct {
   u8 result;
   u8 c_op01;
   u8 c_op02;
+
+  u8 interrupt_flags;
+  u8 ie_register;
+
   int last_zero_flag;
   int last_carry_flag;
   uint
@@ -65,6 +69,16 @@ extern cpu_context cpu;
     cpu.control.shutdown = true; \
   }
 #define PRINTF_ERROR_PC_REG HEX_PATTERN "\n", cpu.reg.pc
+
+void ie_register_write(u8 value);
+u8 ie_register_read();
+void ie_flags_write(u8 value);
+u8 ie_flags_read();
+
+void stack_push(u8 value);
+void stack_push16(u16 value);
+u8 stack_pop();
+u16 stack_pop16();
 
 extern u16 u8_to_u16(u8 lsb, u8 msb);
 extern u8 lsb(u16 number);

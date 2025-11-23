@@ -1,3 +1,0 @@
-/home/mint/gamecboy/build/CMakeFiles/gamecboy.dir
-/home/mint/gamecboy/build/CMakeFiles/edit_cache.dir
-/home/mint/gamecboy/build/CMakeFiles/rebuild_cache.dir

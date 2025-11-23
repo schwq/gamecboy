@@ -1,37 +1,23 @@
 #pragma once
 
 #include <common.h>
-#include <graphics.h>
-#include "cpu.h"
 
-#define MINIMUM_MODE3_LENGHT 172
-extern int dots_count;
+#define LCD_WIDTH 160
+#define LCD_HEIGHT 144
 
 typedef struct {
-  pixel_object pixels_hold[16];
 
-} pixel_fifo;
+  u8 vram[0x2000];
 
-typedef struct {
-  pixel_object pixels[8];
-  graphics_tile parent_tile;
-} fetched_tile;
-
-void init_ppu();
-void reset_screen();
-void draw_background_tiles();
-void draw_ppu();
-void ppu_cycle(int cycles);
-void fifo_pixel_fetcher();
-void terminate_ppu();
-fetched_tile fifo_get_tile(u16 tile_map_addr);
-
-typedef struct {
 } ppu_context;
 
-extern ppu_context ppu_ctx;
+extern ppu_context ppu;
 
-void execute_ppu_mode0();
-void execute_ppu_mode1();
-void execute_ppu_mode2();
-void execute_ppu_mode3();
+void ppu_init();
+void ppu_tick();
+
+u8 ppu_read_vram(u16 addr);
+void ppu_write_vram(u16 addr, u8 value);
+
+u8 ppu_read_oam(u16 addr);
+void ppu_write_oam(u16 addr, u8 value);

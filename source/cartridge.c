@@ -124,7 +124,7 @@ bool cart_header_checksum()
 {
   u8 checksum = 0;
   for (u16 addr = 0x0134; addr <= 0x014C; addr++) {
-    checksum = checksum - ram.data[addr] - 1;
+    checksum = checksum - cartridge.rom_data[addr] - 1;
   }
   return (checksum & 0xFF);
 }
@@ -188,7 +188,7 @@ bool load_rom(const char* file_path)
 
   fclose(fp);
 
-  cartridge.header = (cartridge_header*)(ram.data + 0x0100);
+  cartridge.header = (cartridge_header*)(cartridge.rom_data + 0x0100);
   printf("Loaded Cartridge:\n");
   printf("\t Title        : %s\n", cartridge.header->title);
   printf("\t Type:        : %2.2X (%s)\n", cartridge.header->type,
@@ -212,7 +212,7 @@ bool load_rom(const char* file_path)
   return true;
 }
 
-static void cart_load_save()
+void cart_load_save()
 {
   if (!cartridge.ram_bank)
     return;
@@ -228,10 +228,8 @@ static void cart_load_save()
   fclose(fp);
 }
 
-static void cart_write_save()
+void cart_write_save()
 {
-  if (!cartridge.ram_bank)
-    return;
   if (!cartridge.ram_bank)
     return;
 

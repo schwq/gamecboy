@@ -22,3 +22,10 @@ void logfmt(log_type type, const char* fmt, ...)
   va_end(args);
   printf("\n");
 }
+
+void* memset_w(void* source, int c, size_t s)
+{
+  logfmt(linfo, "Memset %u bytes to the valye %d in address 0x%p", s, c,
+         source);
+  return memset(source, c, s);
+}

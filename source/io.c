@@ -1,3 +1,4 @@
+#include <cpu.h>
 #include <io.h>
 
 u8 io_read(u16 addr)
@@ -12,7 +13,7 @@ u8 io_read(u16 addr)
     return timer_read(addr);
   }
   else if (addr == IO_IE) {
-    // return read_ie();
+    return ie_flags_read();
   }
   else if (BETWEEN(addr, IO_AUDIO_ADDR_STR, IO_AUDIO_ADDR_END)) {
     // return read_audio();
@@ -40,7 +41,8 @@ void io_write(u16 addr, u8 value)
     return;
   }
   else if (addr == IO_IE) {
-    // return write_ie();
+    ie_flags_write(value);
+    return;
   }
   else if (BETWEEN(addr, IO_AUDIO_ADDR_STR, IO_AUDIO_ADDR_END)) {
     // return write_audio();

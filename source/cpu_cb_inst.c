@@ -1,4 +1,5 @@
 #include "../include/cpu_cb_inst.h"
+#include <bus.h>
 #include "../include/cpu.h"
 // Rotate all bits to the left
 void bit_operation_RL(u8* reg, bool carry)
@@ -20,19 +21,19 @@ void bit_operation_RL(u8* reg, bool carry)
 
 void bit_operation_RL_u16(u16 reg, bool carry)
 {
-  u8 bit7 = (read_uint8_data(reg) & 0x80) >> 7;
-  u8 value = read_uint8_data(reg) << 1;
+  u8 bit7 = (bus_read(reg) & 0x80) >> 7;
+  u8 value = bus_read(reg) << 1;
   if (carry) {
-    write_uint8_data(reg, value + bit7);
+    bus_write(reg, value + bit7);
   }
   else {
     short carry_bit = GET_CARRY_FLAG();
-    write_uint8_data(reg, value + carry_bit);
+    bus_write(reg, value + carry_bit);
   }
 
   SET_HALF_FLAG(0);
   SET_SUB_FLAG(0);
-  SET_ZERO_FLAG((read_uint8_data(reg) == 0));
+  SET_ZERO_FLAG((bus_read(reg) == 0));
   SET_CARRY_FLAG((bool)bit7);
 }
 
@@ -58,20 +59,20 @@ void bit_operation_RR(u8* reg, bool carry)
 
 void bit_operation_RR_u16(u16 reg, bool carry)
 {
-  u8 bit0 = read_uint8_data(reg) & 0x01;
-  u8 value = read_uint8_data(reg) >> 1;
+  u8 bit0 = bus_read(reg) & 0x01;
+  u8 value = bus_read(reg) >> 1;
 
   if (carry) {
-    write_uint8_data(reg, value + (bit0 << 7));
+    bus_write(reg, value + (bit0 << 7));
   }
   else {
     short carry_bit = GET_CARRY_FLAG();
-    write_uint8_data(reg, value + (carry_bit << 7));
+    bus_write(reg, value + (carry_bit << 7));
   }
 
   SET_HALF_FLAG(0);
   SET_SUB_FLAG(0);
-  SET_ZERO_FLAG((read_uint8_data(reg) == 0));
+  SET_ZERO_FLAG((bus_read(reg) == 0));
   SET_CARRY_FLAG((bool)bit0);
 }
 
@@ -88,12 +89,11 @@ void bit_operation_swap(u8* reg)
 
 void bit_operation_swap_u16(u16 reg)
 {
-  write_uint8_data(
-      reg, (read_uint8_data(reg) >> 4) | ((read_uint8_data(reg) & 0xF) << 4));
+  bus_write(reg, (bus_read(reg) >> 4) | ((bus_read(reg) & 0xF) << 4));
 
   SET_HALF_FLAG(0);
   SET_SUB_FLAG(0);
-  SET_ZERO_FLAG(read_uint8_data(reg) == 0);
+  SET_ZERO_FLAG(bus_read(reg) == 0);
   SET_CARRY_FLAG(0);
 }
 
@@ -109,7 +109,7 @@ void bit_operation_test(u8* reg, int bit)
 
 void bit_operation_test_u16(u16 reg, int bit)
 {
-  u8 value = (read_uint8_data(reg) >> bit) & 1;
+  u8 value = (bus_read(reg) >> bit) & 1;
 
   SET_SUB_FLAG(0);
   SET_HALF_FLAG(0);
@@ -127,8 +127,8 @@ void bit_operation_reset(u8* reg, int bit)
 void bit_operation_reset_u16(u16 reg, int bit)
 {
   u8 bit_mask = 1 << bit;
-  u8 value = read_uint8_data(reg) & ~bit_mask;
-  write_uint8_data(reg, value);
+  u8 value = bus_read(reg) & ~bit_mask;
+  bus_write(reg, value);
 }
 
 // Rotate A right through carry
@@ -165,13 +165,13 @@ void bit_operation_SLA(u8* reg)
 
 void bit_operation_SLA_u16(u16 reg)
 {
-  u8 bit7 = (read_uint8_data(reg) & 0x80) >> 7;
-  u8 value = read_uint8_data(reg);
-  write_uint8_data(reg, value <<= 1);
+  u8 bit7 = (bus_read(reg) & 0x80) >> 7;
+  u8 value = bus_read(reg);
+  bus_write(reg, value <<= 1);
 
   SET_HALF_FLAG(0);
   SET_SUB_FLAG(0);
-  SET_ZERO_FLAG((read_uint8_data(reg) == 0));
+  SET_ZERO_FLAG((bus_read(reg) == 0));
   SET_CARRY_FLAG((bool)bit7);
 }
 
@@ -189,13 +189,13 @@ void bit_operation_SRL(u8* reg)
 
 void bit_operation_SRL_u16(u16 reg)
 {
-  u8 bit0 = read_uint8_data(reg) & 0x01;
-  u8 value = read_uint8_data(reg);
-  write_uint8_data(reg, value >>= 1);
+  u8 bit0 = bus_read(reg) & 0x01;
+  u8 value = bus_read(reg);
+  bus_write(reg, value >>= 1);
 
   SET_HALF_FLAG(0);
   SET_SUB_FLAG(0);
-  SET_ZERO_FLAG((read_uint8_data(reg) == 0));
+  SET_ZERO_FLAG((bus_read(reg) == 0));
   SET_CARRY_FLAG((bool)bit0);
 }
 
@@ -214,13 +214,13 @@ void bit_operation_SRA(u8* reg)
 
 void bit_operation_SRA_u16(u16 reg)
 {
-  u8 bit0 = read_uint8_data(reg) & 0x01;
-  u8 bit7 = read_uint8_data(reg) & 0x80;
-  write_uint8_data(reg, (read_uint8_data(reg) >> 1) + bit7);
+  u8 bit0 = bus_read(reg) & 0x01;
+  u8 bit7 = bus_read(reg) & 0x80;
+  bus_write(reg, (bus_read(reg) >> 1) + bit7);
 
   SET_HALF_FLAG(0);
   SET_SUB_FLAG(0);
-  SET_ZERO_FLAG((read_uint8_data(reg) == 0));
+  SET_ZERO_FLAG((bus_read(reg) == 0));
   SET_CARRY_FLAG((bool)bit0);
 }
 
@@ -234,13 +234,13 @@ void bit_operation_set(u8* reg, int bit)
 void bit_operation_set_u16(u16 reg, int bit)
 {
   u8 bit_mask = 1 << bit;
-  u8 value = read_uint8_data(reg) | bit_mask;
-  write_uint8_data(reg, value);
+  u8 value = bus_read(reg) | bit_mask;
+  bus_write(reg, value);
 }
 
 void cb_prefix_instruction(instruction inst)
 {
-  u8 prefix = read_uint8_data(cpu.reg.pc++);
+  u8 prefix = bus_read(cpu.reg.pc++);
   switch (prefix) {
     case 0x37:  // Swap upper and lower nibbles of register A, flags updated
       bit_operation_swap(&cpu.reg.a);

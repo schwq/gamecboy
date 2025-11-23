@@ -1,26 +1,24 @@
 #pragma once
 
-#include <SDL2/SDL_render.h>
-#include "common.h"
-
-#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-
-#include <gamepad.h>
+#include <common.h>
 #include <ppu.h>
 
+#define FRAMEBUFFER_SIZE LCD_HEIGHT* LCD_WIDTH
+
 typedef struct {
+
+  u32* framebuffer;
   SDL_Window* window;
-  SDL_Event event;
-  u32 sdl_flags;
-  bool shutdown;
   SDL_Renderer* renderer;
   SDL_Texture* texture;
-} emulation_window;
+  bool running;
+  u32 frame;
 
-extern emulation_window emu_window;
+} window_context;
 
-void init_window(u32 flags, const char* window_name, uint size_x, uint size_y);
-void handle_window_input();
-void render_window();
-void terminate_window();
+extern window_context window;
+
+int window_init(const char* title);
+void window_run();
+void window_terminate();

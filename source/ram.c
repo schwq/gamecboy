@@ -1,5 +1,4 @@
-#include "../include/ram.h"
-#include "graphics.h"
+#include <ram.h>
 
 ram_context ram = {0};
 

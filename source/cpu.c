@@ -1,9 +1,53 @@
-#include "../include/cpu.h"
 #include <bus.h>
-#include "../include/instruction.h"
-#include "common.h"
+#include <common.h>
+#include <cpu.h>
+#include <emulator.h>
+#include <instruction.h>
+#include <interrupt.h>
 
-cpu_context cpu;
+cpu_context cpu = {0};
+
+void ie_register_write(u8 value)
+{
+  cpu.ie_register = value;
+}
+
+u8 ie_register_read()
+{
+  return cpu.ie_register;
+}
+
+void ie_flags_write(u8 value)
+{
+  cpu.interrupt_flags = value;
+}
+
+u8 ie_flags_read()
+{
+  return cpu.interrupt_flags;
+}
+
+void stack_push(u8 value)
+{
+  cpu.reg.sp--;
+  bus_write(cpu.reg.sp, value);
+}
+
+void stack_push16(u16 value)
+{
+  stack_push((value >> 8) & 0xFF);
+  stack_push(value & 0xFF);
+}
+
+u8 stack_pop()
+{
+  return bus_read(cpu.reg.sp++);
+}
+
+u16 stack_pop16()
+{
+  return u8_to_u16(stack_pop(), stack_pop());
+}
 
 u8 rotate_left(u8 reg, uint shift)
 {
@@ -282,8 +326,7 @@ static void print_curr_cpu(instruction inst)
   printf(
       "[INST]: %s [OP01]: %s [OP01]: %s [ADDR]: %s [OPCODE]: 0x%2.2X [PC]: "
       "0x%2.2X ",
-      get_mnemonic_string(inst.inst_mnemonic),\ 
-            get_op_string(inst.op01),
+      get_mnemonic_string(inst.inst_mnemonic), get_op_string(inst.op01),
       get_op_string(inst.op02), get_addr_mode_string(inst.address_mode),
       cpu.current_opcode, cpu.reg.pc);
   print_flags_info();
@@ -293,28 +336,34 @@ static void print_curr_cpu(instruction inst)
 
 void run_cpu()
 {
-  cpu.pc_can_increment = true;
-  instruction inst = get_instruction(bus_read(cpu.reg.pc));
+  if (!cpu.control.halted) {
+    cpu.pc_can_increment = true;
+    instruction inst = get_instruction(bus_read(cpu.reg.pc));
 
-  cpu.current_opcode = bus_read(cpu.reg.pc);
+    cpu.current_opcode = bus_read(cpu.reg.pc);
 
-  print_curr_cpu(inst);
+    print_curr_cpu(inst);
 
-  /* if (DG_STOP_AT_RST_IN) {
-    if (inst.inst_mnemonic == in_rst) {
-      cpu.control.shutdown = true;
-    }
-  } */
+    fetch_cpu(inst);
 
-  fetch_cpu(inst);
-
-  if (!cpu.control.shutdown) {
     cpu.last_zero_flag = GET_ZERO_FLAG();
     cpu.last_carry_flag = GET_CARRY_FLAG();
     affected_flags(inst.flags);
     cycle_cpu(cpu.total_cycles);
     if (cpu.pc_can_increment)
       cpu.reg.pc++;
+  }
+  else {
+    cycle_cpu(1);
+    if (cpu.interrupt_flags)
+      cpu.control.halted = false;
+  }
+  if (cpu.control.ime) {
+    int_handle_interrupt();
+    cpu.control.ime = false;
+  }
+  if (cpu.control.ime_scheduled) {
+    cpu.control.ime = true;
   }
 }
 
@@ -333,11 +382,13 @@ void init_cpu()
   cpu.control.shutdown = false;
   cpu.last_zero_flag = 0;
   cpu.last_carry_flag = 0;
+  cpu.ie_register = 0;
+  cpu.interrupt_flags = 0;
 }
 
 void cycle_cpu(uint cycles)
 {
-  // TODO
+  emu_cycle(cycles);
 }
 
 void fetch_cpu(instruction inst)
@@ -355,14 +406,10 @@ void fetch_cpu(instruction inst)
     case in_nop:
       break;
     case in_push:
-      cpu.reg.sp--;
-      bus_write(cpu.reg.sp--, msb(cpu_read_reg(inst.op01)));
-      bus_write(cpu.reg.sp, lsb(cpu_read_reg(inst.op01)));
+      stack_push16(cpu_read_reg(inst.op01));
       break;
     case in_pop: {
-      u16 addr1 = cpu.reg.sp++;
-      u16 addr2 = cpu.reg.sp++;
-      cpu_write_reg(inst.op01, u8_to_u16(bus_read(addr1), bus_read(addr2)));
+      cpu_write_reg(inst.op01, stack_pop16());
     } break;
     case in_add:
       ADD_proc(inst);
@@ -411,7 +458,7 @@ void fetch_cpu(instruction inst)
       SET_SUB_FLAG(0)
       break;
     case in_daa:
-      // TODO: https://ehaskins.com/2018-01-30 Z80 DAA/
+      DAA_proc(inst);
       break;
     case in_cpl:
       cpu.reg.a = ~cpu.reg.a;
@@ -425,9 +472,7 @@ void fetch_cpu(instruction inst)
       RET_proc(inst);
       break;
     case in_reti: {
-      u16 addr1 = cpu.reg.sp++;
-      u16 addr2 = cpu.reg.sp++;
-      cpu.reg.pc = u8_to_u16(bus_read(addr1), bus_read(addr2));
+      cpu.reg.pc = stack_pop16();
       cpu.control.ime = 1;
     } break;
     case in_rst:
@@ -443,7 +488,6 @@ void fetch_cpu(instruction inst)
       // TODO
       break;
     case in_halt:
-      // TODO
       cpu.control.halted = true;
       break;
     case in_cb:
@@ -766,6 +810,23 @@ void INC_proc(instruction inst)
   }
 }
 
+void DAA_proc(instruction inst)
+{
+  u8 u = 0;
+  int fc = 0;
+  if (get_flag(cf_half) || (!get_flag(cf_sub) && (cpu.reg.a & 0xF) > 9)) {
+    u = 6;
+  }
+  if (get_flag(cf_carry) || (!get_flag(cf_sub) && cpu.reg.a > 0x99)) {
+    u |= 0x60;
+    fc = 1;
+  }
+  cpu.reg.a += get_flag(cf_sub) ? -u : u;
+  SET_CARRY_FLAG(fc);
+  SET_ZERO_FLAG(cpu.reg.a == 0);
+  SET_HALF_FLAG(0);
+}
+
 void DEC_proc(instruction inst)
 {
   switch (inst.address_mode) {
@@ -943,16 +1004,12 @@ void CALL_proc(instruction inst)
       u16 addr2 = ++cpu.reg.pc;
       u16 nn = u8_to_u16(bus_read(addr1), bus_read(addr2));
       if (cpu.current_opcode == 0xCD) {
-        cpu.reg.sp--;
-        bus_write(cpu.reg.sp--, msb(cpu.reg.pc));
-        bus_write(cpu.reg.sp, lsb(cpu.reg.pc));
+        stack_push16(cpu.reg.pc);
         cpu.reg.pc = nn;
       }
       else {
         if (cpu_check_cond(inst.cond_type)) {
-          cpu.reg.sp--;
-          bus_write(cpu.reg.sp--, msb(cpu.reg.pc));
-          bus_write(cpu.reg.sp, lsb(cpu.reg.pc));
+          stack_push16(cpu.reg.pc);
           cpu.reg.pc = nn;
         }
       }
@@ -982,9 +1039,7 @@ void RET_proc(instruction inst)
       }
     } break;
     case am_none: {
-      u8 data1 = bus_read(cpu.reg.sp++);
-      u8 data2 = bus_read(cpu.reg.sp++);
-      cpu.reg.pc = u8_to_u16(data1, data2);
+      cpu.reg.pc = stack_pop16();
     } break;
     default:
       _ERROR(
@@ -1000,9 +1055,7 @@ void RST_proc(instruction inst)
   switch (inst.address_mode) {
     case am_imp:
       // todo check func
-      cpu.reg.sp--;
-      bus_write(cpu.reg.sp--, msb(cpu.reg.pc));
-      bus_write(cpu.reg.sp, lsb(cpu.reg.pc));
+      stack_push16(cpu.reg.pc);
       cpu.reg.pc = u8_to_u16(inst.param, 0x00);
       break;
     default:

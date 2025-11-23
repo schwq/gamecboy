@@ -84,4 +84,16 @@ typedef unsigned int uint;
 
 typedef enum { linfo, lerror, lwarn } log_type;
 
+#define FOR_I(i, range) for (int i = 0; i < range; i++)
+
+#define FREE_FUN(p, fun) \
+  do {                   \
+    if (p) {             \
+      fun(p);            \
+      p = NULL;          \
+    }                    \
+  } while (0)
+#define FREE(p) FREE_FUN(p, free)
+
 extern void logfmt(log_type type, const char* fmt, ...);
+extern void* memset_w(void* source, int c, size_t s);

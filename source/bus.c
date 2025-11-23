@@ -1,7 +1,9 @@
 #include <bus.h>
 #include <cartridge.h>
+#include <cpu.h>
+#include <dma.h>
+#include <io.h>
 #include <ram.h>
-
 /**
  * 0000	3FFF	16 KiB ROM bank 00	From cartridge, usually a fixed bank
    4000	7FFF	16 KiB ROM Bank 01–NN	From cartridge, switchable bank via mapper (if any)
@@ -36,17 +38,18 @@ u8 bus_read(u16 addr)
     return 0x00;
   }
   else if (addr < 0xFEA0) {
-    // if dma_transfering return 0
+    if (dma_is_transferring())
+      return 0xFF;
     // oam_read
   }
   else if (addr < 0xFF00) {
     return 0x00;
   }
   else if (addr < 0xFF80) {
-    //io_read
+    return io_read(addr);
   }
   else if (addr == 0xFFFF) {
-    //ie_read
+    return ie_register_read(addr);
   }
   return hram_read(addr);
 }
@@ -71,20 +74,21 @@ void bus_write(u16 addr, u8 value)
       return 0x00;
     }
     else if (addr < 0xFEA0) {
-      // if dma_transfering return 0
+      if (dma_is_transferring())
+        return;
       // oam_write
     }
     else if (addr < 0xFF00) {
       return 0x00;
     }
     else if (addr < 0xFF80) {
-      //io_write
+      io_write(addr, value);
     }
     else if (addr < 0xFFFE) {
       hram_write(addr, value);
     }
     else if (addr == 0xFFFF) {
-      //ie_write
+      ie_register_write(value);
     }
   }
 }
