@@ -70,7 +70,7 @@ void timer_write(u16 addr, u8 value)
       timer.tac = value;
       break;
     default:
-      logfmt(lerror, "Timer write out of range " HEX_PATTERN, addr);
+      logfmt(LERROR, "Timer write out of range " HEX_PATTERN, addr);
   }
 }
 
@@ -86,7 +86,7 @@ u8 timer_read(u16 addr)
     case TIMER_TAC_ADDR:
       return timer.tac;
     default:
-      logfmt(lerror, "Timer read out of range " HEX_PATTERN, addr);
+      logfmt(LERROR, "Timer read out of range " HEX_PATTERN, addr);
       return 0xFF;
   }
 }

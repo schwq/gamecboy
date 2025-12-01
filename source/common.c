@@ -3,11 +3,11 @@
 static const char* log_type_to_str(log_type type)
 {
   switch (type) {
-    case lerror:
+    case LERROR:
       return "ERROR";
-    case lwarn:
+    case LWARN:
       return "WARN";
-    case linfo:
+    case LINFO:
     default:
       return "INFO";
   }
@@ -25,7 +25,7 @@ void logfmt(log_type type, const char* fmt, ...)
 
 void* memset_w(void* source, int c, size_t s)
 {
-  logfmt(linfo, "Memset %u bytes to the valye %d in address 0x%p", s, c,
+  logfmt(LINFO, "Memset %u bytes to the valye %d in address 0x%p", s, c,
          source);
   return memset(source, c, s);
 }

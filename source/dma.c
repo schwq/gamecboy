@@ -1,4 +1,5 @@
 #include <dma.h>
+#include <ppu.h>
 
 void dma_start(u8 value)
 {
@@ -16,7 +17,7 @@ void dma_tick()
     dma.delay--;
     return;
   }
-  //ppu_oam_write(dma.byte, bus_read((dma.value * 0x100) + dma.byte));
+  ppu_write_oam(dma.byte, bus_read((dma.value * 0x100) + dma.byte));
   dma.byte++;
   dma.active = dma.byte < 0xA0;
 }

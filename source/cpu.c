@@ -7,6 +7,11 @@
 
 cpu_context cpu = {0};
 
+void cpu_request_int(interrupt_type type)
+{
+  cpu.interrupt_flags |= type;
+}
+
 void ie_register_write(u8 value)
 {
   cpu.ie_register = value;

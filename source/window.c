@@ -1,4 +1,5 @@
 #include <gamepad.h>
+#include <lcd.h>
 #include <window.h>
 
 window_context window = {0};
@@ -7,7 +8,7 @@ int window_init(const char* title)
 {
 
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-    logfmt(lerror, "Cannot initialize SDL2! %s", SDL_GetError());
+    logfmt(LERROR, "Cannot initialize SDL2! %s", SDL_GetError());
     return -1;
   }
 
@@ -16,7 +17,7 @@ int window_init(const char* title)
                        LCD_WIDTH, LCD_HEIGHT, SDL_WINDOW_SHOWN);
 
   if (!window.window) {
-    logfmt(lerror, "Cannot initialize SDL2 window! %s", SDL_GetError());
+    logfmt(LERROR, "Cannot initialize SDL2 window! %s", SDL_GetError());
     SDL_Quit();
     return -1;
   }
@@ -25,7 +26,7 @@ int window_init(const char* title)
       SDL_CreateRenderer(window.window, -1, SDL_RENDERER_ACCELERATED);
 
   if (!window.renderer) {
-    logfmt(lerror, "Cannot initialize SDL2 renderer! %s", SDL_GetError());
+    logfmt(LERROR, "Cannot initialize SDL2 renderer! %s", SDL_GetError());
     SDL_Quit();
     return -1;
   }

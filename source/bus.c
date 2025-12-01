@@ -3,6 +3,7 @@
 #include <cpu.h>
 #include <dma.h>
 #include <io.h>
+#include <ppu.h>
 #include <ram.h>
 /**
  * 0000	3FFF	16 KiB ROM bank 00	From cartridge, usually a fixed bank
@@ -25,7 +26,7 @@ u8 bus_read(u16 addr)
     return cart_read(addr);
   }
   else if (addr < 0xA000) {
-    //ppu_read_vram
+    return ppu_read_vram(addr);
   }
   else if (addr < 0xC000) {
     return cart_read(addr);
@@ -40,7 +41,7 @@ u8 bus_read(u16 addr)
   else if (addr < 0xFEA0) {
     if (dma_is_transferring())
       return 0xFF;
-    // oam_read
+    return ppu_read_oam(addr);
   }
   else if (addr < 0xFF00) {
     return 0x00;
@@ -61,13 +62,13 @@ void bus_write(u16 addr, u8 value)
       return cart_write(addr, value);
     }
     else if (addr < 0xA000) {
-      //ppu_write_vram
+      return ppu_write_vram(addr, value);
     }
     else if (addr < 0xC000) {
       return cart_write(addr, value);
     }
     else if (addr < 0xE000) {
-      wram_write(addr, value);
+      return wram_write(addr, value);
     }
     else if (addr < 0xFE00) {
       // echo_ram
@@ -76,19 +77,19 @@ void bus_write(u16 addr, u8 value)
     else if (addr < 0xFEA0) {
       if (dma_is_transferring())
         return;
-      // oam_write
+      return ppu_write_oam(addr, value);
     }
     else if (addr < 0xFF00) {
       return 0x00;
     }
     else if (addr < 0xFF80) {
-      io_write(addr, value);
+      return io_write(addr, value);
     }
     else if (addr < 0xFFFE) {
-      hram_write(addr, value);
+      return hram_write(addr, value);
     }
     else if (addr == 0xFFFF) {
-      ie_register_write(value);
+      return ie_register_write(value);
     }
   }
 }

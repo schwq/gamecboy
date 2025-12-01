@@ -221,7 +221,7 @@ void cart_load_save()
   sprintf(filename, "%s.gb_battery", cartridge.header->title);
   FILE* fp = fopen(filename, "rb");
   if (!fp) {
-    logfmt(lwarn, "Cannot open file: %s", filename);
+    logfmt(LWARN, "Cannot open file: %s", filename);
     return;
   }
   fread(cartridge.ram_bank, 0x2000, 1, fp);
@@ -237,11 +237,12 @@ void cart_write_save()
   sprintf(filename, "%s.gb_battery", cartridge.header->title);
   FILE* fp = fopen(filename, "rb");
   if (!fp) {
-    logfmt(lwarn, "Cannot open file: %s", filename);
+    logfmt(LWARN, "Cannot open file: %s", filename);
     return;
   }
   fwrite(cartridge.ram_bank, 0x2000, 1, fp);
   fclose(fp);
+  cartridge.save = false;
 }
 
 u8 cart_read(u16 addr)

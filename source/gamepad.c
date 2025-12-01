@@ -80,7 +80,7 @@ void gamepad_set_keysym(uint32_t sdlkey, bool state)
     case SDLK_TAB:
       gamepad_get_buttons()->select = state;
     default:
-      logfmt(lwarn, "Cannot find SDLK_ related to the value: " HEX_PATTERN,
+      logfmt(LWARN, "Cannot find SDLK_ related to the value: " HEX_PATTERN,
              sdlkey);
   }
 }

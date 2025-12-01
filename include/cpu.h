@@ -1,5 +1,6 @@
 #pragma once
 
+#include <interrupt.h>
 #include "cartridge.h"
 #include "common.h"
 #include "cpu_cb_inst.h"
@@ -100,6 +101,8 @@ void decrement_reg(reg_set reg, uint decrement);
 void set_flag(cpu_flags flag, int value);
 short get_flag(cpu_flags flag);
 bool cpu_check_cond(condition_type cond);
+
+void cpu_request_int(interrupt_type type);
 
 void print_flags_info();
 

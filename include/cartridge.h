@@ -48,3 +48,5 @@ u8 cart_read(u16 addr);
 void cart_write(u16 addr, u8 value);
 
 bool load_rom(const char* file_path);
+
+void cart_write_save();

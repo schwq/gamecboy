@@ -7,7 +7,7 @@ u8 wram_read(u16 addr)
   addr -= 0xC000;
 
   if (addr >= 0x2000) {
-    logfmt(lerror, "WRAM memory read out of range " HEX_PATTERN, addr + 0xC000);
+    logfmt(LERROR, "WRAM memory read out of range " HEX_PATTERN, addr + 0xC000);
     _CRITICAL
     return 0xFF;
   }
@@ -20,7 +20,7 @@ u8 hram_read(u16 addr)
   addr -= 0xFF80;
 
   if (addr >= 0x80) {
-    logfmt(lerror, "HRAM memory read out of range " HEX_PATTERN, addr + 0xFF80);
+    logfmt(LERROR, "HRAM memory read out of range " HEX_PATTERN, addr + 0xFF80);
     _CRITICAL
     return 0xFF;
   }
@@ -33,7 +33,7 @@ void wram_write(u16 addr, u8 value)
   addr -= 0xC000;
 
   if (addr >= 0x2000) {
-    logfmt(lerror, "WRAM memory write out of range " HEX_PATTERN,
+    logfmt(LERROR, "WRAM memory write out of range " HEX_PATTERN,
            addr + 0xC000);
     _CRITICAL
     return;
@@ -47,7 +47,7 @@ void hram_write(u16 addr, u8 value)
   addr -= 0xFF80;
 
   if (addr >= 0x80) {
-    logfmt(lerror, "HRAM memory write out of range " HEX_PATTERN,
+    logfmt(LERROR, "HRAM memory write out of range " HEX_PATTERN,
            addr + 0xFF80);
     _CRITICAL
     return;

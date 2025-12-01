@@ -11,7 +11,7 @@ typedef struct {
 
 } emu_context;
 
-static emu_context emu;
+extern emu_context emu;
 
 void emu_cycle(unsigned int cycles);
 int emu_run(int argc, char** argv);

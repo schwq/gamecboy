@@ -82,7 +82,7 @@ typedef unsigned int uint;
   PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
 /* --- end macros --- */
 
-typedef enum { linfo, lerror, lwarn } log_type;
+typedef enum { LINFO, LERROR, LWARN } log_type;
 
 #define FOR_I(i, range) for (int i = 0; i < range; i++)
 

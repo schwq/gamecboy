@@ -9,7 +9,7 @@ u8 serial_read(u16 addr)
   if (addr == SERIAL_SC)
     return serial.data[1];
 
-  logfmt(lerror, "Address is out of range to read serial data! " HEX_PATTERN,
+  logfmt(LERROR, "Address is out of range to read serial data! " HEX_PATTERN,
          addr);
 
   return 0xFF;
@@ -26,6 +26,6 @@ void serial_write(u16 addr, u8 value)
     return;
   }
 
-  logfmt(lerror, "Address is out of range to write serial data! " HEX_PATTERN,
+  logfmt(LERROR, "Address is out of range to write serial data! " HEX_PATTERN,
          addr);
 }

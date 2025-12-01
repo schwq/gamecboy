@@ -5,6 +5,7 @@ project(gamecboy)
 
 set(sourceFiles
     source/main.c 
+    source/lcd.c
     source/io.c
     source/cartridge.c 
     source/serial.c

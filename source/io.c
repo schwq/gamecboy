@@ -1,5 +1,6 @@
 #include <cpu.h>
 #include <io.h>
+#include <lcd.h>
 
 u8 io_read(u16 addr)
 {
@@ -19,10 +20,10 @@ u8 io_read(u16 addr)
     // return read_audio();
   }
   else if (BETWEEN(addr, IO_LCD_ADDR_STR, IO_LCD_ADDR_END)) {
-    //return read_lcd();
+    return lcd_read(addr);
   }
 
-  logfmt(lerror, "IO read out of range " HEX_PATTERN, addr);
+  logfmt(LERROR, "IO read out of range " HEX_PATTERN, addr);
   return 0x00;
 }
 
@@ -48,8 +49,9 @@ void io_write(u16 addr, u8 value)
     // return write_audio();
   }
   else if (BETWEEN(addr, IO_LCD_ADDR_STR, IO_LCD_ADDR_END)) {
-    //return write_lcd();
+    lcd_write(addr, value);
+    return;
   }
 
-  logfmt(lerror, "IO write out of range " HEX_PATTERN, addr);
+  logfmt(LERROR, "IO write out of range " HEX_PATTERN, addr);
 }
